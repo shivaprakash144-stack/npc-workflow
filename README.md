@@ -1,0 +1,56 @@
+# NPC Workflow Manager
+
+Complete offline-operations software for a printing & customised gifts business. Everything lives **inside the app** (built-in database — no Google Sheets): Customers → Enquiry → Job Card → Design → Production → Delivery → Payment → Dashboard.
+
+## Features
+
+- **Staff login** — up to any number of username + password accounts (no OTP, no SMS/email services)
+- **Customers** — database with Customer ID (C000001), name, mobile, company, address, GST
+- **Enquiries** — Enquiry ID (E26000001), product type, size/material, qty, design required, reference image upload, estimated price; status dropdown: New Enquiry / Quote Sent / Confirmed / Cancelled; one-tap **Convert to job**
+- **Job cards** — auto Job ID **J26000001** (prefix follows the year: J27… in 2027, numbering restarts); price, advance, delivery date, priority (Normal/Urgent), order status dropdown
+- **Design dept** — designer name, design file upload (image/PDF), status: Designing / Sent to Customer / Correction / Approved
+- **Production dept** — machine type, work type (Digital / Flex / Laser / UV / Gift printing), status: Printing / Finishing / Packing / Ready
+- **Delivery** — Pickup/Courier, courier name, tracking number, status: Ready / Dispatched / Delivered
+- **Payment** — Yes/No + auto balance calculation
+- **Owner dashboard** — Today's orders, Design pending, Production pending, Ready for delivery, Pending payment, Overdue deliveries, New enquiries, Completed orders + stage-wise analytics + urgent jobs list
+- Every status is a **dropdown** — staff just select, no typing errors
+
+## Deploy (all free, no approvals)
+
+### 1. GitHub
+Unzip and upload the contents to a private GitHub repo (package.json at repo root).
+
+### 2. Vercel project
+vercel.com → Add New → Project → import the repo (Next.js auto-detected). **Don't deploy yet.**
+
+### 3. Database (2 clicks)
+In your Vercel project → **Storage** tab → **Create Database** → choose **Neon (Postgres)** → Continue → Create. Vercel automatically adds `DATABASE_URL` to your project. Free tier, no card needed. Tables are created automatically on first use.
+
+### 4. Environment variables
+Project → Settings → Environment Variables:
+
+| Name | Value |
+|---|---|
+| `SESSION_SECRET` | any long random string |
+| `STAFF_USERS` | `owner:Pass@123,ravi:Pass@456,kumar:Pass@789` … up to 10 (or more) `username:password` pairs, comma separated |
+| `DATABASE_URL` | already added by step 3 — don't touch |
+
+To add/remove staff or change a password later: edit `STAFF_USERS` → Deployments → Redeploy.
+
+### 5. Deploy
+Deployments → Deploy (or push any commit). Open `https://<project>.vercel.app` on your phone → Add to Home Screen.
+
+## Notes
+
+- File uploads (reference images, design files) are stored in the database; keep them under **2 MB** each. For heavy design files, store the final print file on your computer/drive and upload a small preview here.
+- Sessions last 30 days per device; sign out from the dashboard header.
+- ID formats: Jobs `J<yy>000001`, Enquiries `E<yy>000001`, Customers `C000001`.
+- WhatsApp/SMS notifications: planned next phase (needs Meta WhatsApp API or SMS provider — has approval processes, so it's kept out for now as requested).
+
+## Run locally
+
+```bash
+npm install
+# put DATABASE_URL, SESSION_SECRET, STAFF_USERS in .env.local
+npm run dev
+```

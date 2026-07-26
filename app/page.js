@@ -1,0 +1,163 @@
+"use client";
+
+import { useEffect, useMemo, useState, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Shell from "@/components/Shell";
+import { ORDER_STATUS } from "@/lib/options";
+import { stagePill, stageColorVar } from "@/lib/status";
+
+export default function Dashboard() {
+  const router = useRouter();
+  const [jobs, setJobs] = useState(null);
+  const [enquiries, setEnquiries] = useState([]);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    try {
+      const [jr, er] = await Promise.all([
+        fetch("/api/jobs", { cache: "no-store" }),
+        fetch("/api/enquiries", { cache: "no-store" }),
+      ]);
+      if (jr.status === 401) return router.replace("/login");
+      const jd = await jr.json();
+      const ed = await er.json();
+      if (!jr.ok) setError(jd.error || "Could not load jobs");
+      else {
+        setJobs(jd.jobs);
+        setEnquiries(ed.enquiries || []);
+        setError("");
+      }
+    } catch {
+      setError("Network problem while loading");
+    }
+  }, [router]);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 60000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const s = useMemo(() => {
+    const list = jobs || [];
+    const today = new Date().toISOString().slice(0, 10);
+    const st = (v) => (v || "").toLowerCase();
+    const by = (name) => list.filter((j) => st(j.order_status) === name.toLowerCase()).length;
+    return {
+      today: list.filter((j) => (j.order_date || "").slice(0, 10) === today).length,
+      designPending: by("Design Pending") + by("Design Approval"),
+      production: by("Production"),
+      ready: by("Ready"),
+      delivered: by("Delivered"),
+      pendingPay: list.filter((j) => st(j.payment_status) !== "yes" && st(j.order_status) !== "cancelled").length,
+      overdue: list.filter((j) => j.delivery_date && j.delivery_date.slice(0, 10) < today && !["delivered", "cancelled"].includes(st(j.order_status))).length,
+      newEnq: enquiries.filter((e) => (e.status || "") === "New Enquiry").length,
+      total: list.length,
+      pending: list.filter((j) => !["delivered", "cancelled"].includes(st(j.order_status))).length,
+      byStage: ORDER_STATUS.filter((x) => x !== "Cancelled").map((stage) => ({ stage, count: by(stage) })),
+    };
+  }, [jobs, enquiries]);
+
+  const maxStage = Math.max(1, ...s.byStage.map((x) => x.count));
+  const urgent = (jobs || []).filter(
+    (j) => (j.priority || "") === "Urgent" && !["delivered", "cancelled"].includes((j.order_status || "").toLowerCase())
+  );
+
+  return (
+    <Shell title="Dashboard">
+      {error && <div className="alert alert-error" style={{ marginTop: 14 }}>{error}</div>}
+      {!jobs && !error && <div className="spinner" aria-label="Loading" />}
+      {jobs && (
+        <>
+          <section className="section">
+            <div className="eyebrow">Today at a glance</div>
+            <div className="stat-grid">
+              <div className="stat-card" style={{ "--accent": "var(--ink)" }}>
+                <div className="stat-num">{s.today}</div>
+                <div className="stat-label">Today&apos;s orders</div>
+              </div>
+              <div className="stat-card" style={{ "--accent": "var(--magenta)" }}>
+                <div className="stat-num">{s.designPending}</div>
+                <div className="stat-label">Design pending</div>
+              </div>
+              <div className="stat-card" style={{ "--accent": "var(--cyan)" }}>
+                <div className="stat-num">{s.production}</div>
+                <div className="stat-label">Production pending</div>
+              </div>
+              <div className="stat-card" style={{ "--accent": "var(--yellow)" }}>
+                <div className="stat-num">{s.ready}</div>
+                <div className="stat-label">Ready for delivery</div>
+              </div>
+              <div className="stat-card" style={{ "--accent": "var(--red)" }}>
+                <div className="stat-num">{s.pendingPay}</div>
+                <div className="stat-label">Pending payment</div>
+              </div>
+              <div className="stat-card" style={{ "--accent": "var(--red)" }}>
+                <div className="stat-num">{s.overdue}</div>
+                <div className="stat-label">Overdue deliveries</div>
+              </div>
+              <div className="stat-card" style={{ "--accent": "var(--magenta)" }}>
+                <div className="stat-num">{s.newEnq}</div>
+                <div className="stat-label">New enquiries</div>
+              </div>
+              <div className="stat-card" style={{ "--accent": "var(--key)" }}>
+                <div className="stat-num">{s.delivered}</div>
+                <div className="stat-label">Completed orders</div>
+              </div>
+            </div>
+          </section>
+
+          <section className="section">
+            <div className="eyebrow">Reports &amp; analytics</div>
+            <div className="panel">
+              <div className="h2">{s.delivered} completed · {s.pending} pending of {s.total} jobs</div>
+              {s.byStage.map((x) => (
+                <div className="bar-row" key={x.stage}>
+                  <div className="bar-label">{x.stage}</div>
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{ width: `${(x.count / maxStage) * 100}%`, background: stageColorVar(x.stage) }} />
+                  </div>
+                  <div className="bar-count">{x.count}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {urgent.length > 0 && (
+            <section className="section">
+              <div className="eyebrow">Urgent jobs</div>
+              {urgent.map((j) => (
+                <Link href={`/jobs/${j.job_id}`} className="list-row" key={j.job_id}>
+                  <div className="row-top">
+                    <span className="job-id">{j.job_id}</span>
+                    <span className="pill pill-urgent">Urgent · due {j.delivery_date ? j.delivery_date.slice(0, 10) : "—"}</span>
+                  </div>
+                  <div className="row-title">{j.customer_name}</div>
+                  <div className="row-sub">{j.product_category} · {j.order_status}</div>
+                </Link>
+              ))}
+            </section>
+          )}
+
+          <section className="section">
+            <div className="eyebrow">Recent jobs</div>
+            {(jobs || []).slice(0, 6).map((j) => (
+              <Link href={`/jobs/${j.job_id}`} className="list-row" key={j.job_id}>
+                <div className="row-top">
+                  <span className="job-id">{j.job_id}</span>
+                  <span className={`pill ${stagePill(j.order_status)}`}><span className="dot" />{j.order_status}</span>
+                </div>
+                <div className="row-title">{j.customer_name}</div>
+                <div className="row-sub">{[j.product_category, j.quantity && `Qty ${j.quantity}`].filter(Boolean).join(" · ")}</div>
+              </Link>
+            ))}
+            {(jobs || []).length === 0 && (
+              <div className="empty">No jobs yet. Create your first enquiry or job card.</div>
+            )}
+          </section>
+        </>
+      )}
+    </Shell>
+  );
+}
