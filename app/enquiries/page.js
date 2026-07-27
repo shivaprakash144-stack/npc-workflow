@@ -4,10 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
-import { Field, Select, Text, FileUpload } from "@/components/Field";
+import { Field, Select, Text, FileUpload, SelectWithOther } from "@/components/Field";
 import { ENQUIRY_STATUS, PRODUCT_TYPES, YES_NO } from "@/lib/options";
+import { formatStamp } from "@/lib/status";
 
-const empty = { customer_name: "", mobile: "", product_type: PRODUCT_TYPES[0], size_material: "", quantity: "", design_required: "No", ref_image: "", est_price: "", status: "New Enquiry" };
+const empty = { customer_name: "", mobile: "", product_type: PRODUCT_TYPES[0], size_material: "", quantity: "", design_required: "No", ref_image: "", status: "New Enquiry" };
 
 export default function EnquiriesPage() {
   const router = useRouter();
@@ -75,11 +76,10 @@ export default function EnquiriesPage() {
           <div className="form-grid">
             <Field label="Customer name *" full><Text value={form.customer_name} onChange={(v) => set("customer_name", v)} placeholder="Ramesh Kumar" /></Field>
             <Field label="Mobile (10 digits) *"><Text value={form.mobile} onChange={(v) => set("mobile", v.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="9840012345" /></Field>
-            <Field label="Product type *"><Select value={form.product_type} onChange={(v) => set("product_type", v)} options={PRODUCT_TYPES} /></Field>
+            <Field label="Product type *"><SelectWithOther value={form.product_type} onChange={(v) => set("product_type", v)} options={PRODUCT_TYPES} placeholder="Type the product details" /></Field>
             <Field label="Size / material"><Text value={form.size_material} onChange={(v) => set("size_material", v)} placeholder="10x6 ft flex" /></Field>
             <Field label="Quantity *"><Text value={form.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" placeholder="100" /></Field>
             <Field label="Design required"><Select value={form.design_required} onChange={(v) => set("design_required", v)} options={YES_NO} /></Field>
-            <Field label="Estimated price (₹)"><Text value={form.est_price} onChange={(v) => set("est_price", v)} inputMode="numeric" placeholder="1500" /></Field>
             <Field label="Status" full><Select value={form.status} onChange={(v) => set("status", v)} options={ENQUIRY_STATUS} /></Field>
             <Field label="Reference image (optional, under 2 MB)" full>
               <FileUpload label="Upload reference image" value={form.ref_image} onChange={(v) => set("ref_image", v)} />
@@ -89,6 +89,22 @@ export default function EnquiriesPage() {
             <button className="btn-secondary" onClick={() => { setShowForm(false); setEditing(null); setForm(empty); }}>Cancel</button>
             <button className="btn-primary" style={{ marginTop: 10 }} onClick={save} disabled={busy}>{busy ? "Saving…" : "Save enquiry"}</button>
           </div>
+          {editing && (() => {
+            let h = [];
+            try { h = JSON.parse(form.history || "[]"); } catch {}
+            if (!Array.isArray(h) || h.length === 0) return null;
+            return (
+              <div style={{ marginTop: 14 }}>
+                <div className="eyebrow">Activity</div>
+                {[...h].reverse().map((e, i) => (
+                  <div key={i} style={{ display: "flex", gap: 10, marginTop: 8, fontSize: 12.5 }}>
+                    <span className="job-id" style={{ whiteSpace: "nowrap" }}>{formatStamp(e.at)}</span>
+                    <span><b>{e.by}</b>{e.by ? " · " : ""}{e.text}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </section>
       )}
 
@@ -107,7 +123,8 @@ export default function EnquiriesPage() {
               <span className={`pill ${e.status === "Confirmed" ? "pill-key" : e.status === "Cancelled" ? "pill-red" : e.status === "Quote Sent" ? "pill-cyan" : "pill-magenta"}`}>{e.status}</span>
             </div>
             <div className="row-title">{e.customer_name}</div>
-            <div className="row-sub">{[e.product_type, e.size_material, e.quantity && `Qty ${e.quantity}`, e.est_price && `₹${e.est_price}`].filter(Boolean).join(" · ")}</div>
+            <div className="row-sub">{[e.product_type, e.size_material, e.quantity && `Qty ${e.quantity}`].filter(Boolean).join(" · ")}</div>
+            {e.updated_at && <div className="row-sub">Last updated {formatStamp(e.updated_at)}</div>}
             <div className="btn-row" style={{ marginTop: 10 }}>
               <button className="btn-ghost" onClick={() => edit(e)}>Edit</button>
               {e.status !== "Cancelled" && (

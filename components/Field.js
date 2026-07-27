@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 export function Field({ label, children, full }) {
   return (
     <div className={full ? "full" : ""}>
@@ -52,6 +54,49 @@ export function FileUpload({ label, value, onChange }) {
           <button type="button" className="btn-ghost" style={{ marginLeft: "auto" }} onClick={(e) => { e.preventDefault(); onChange(""); }}>Remove</button>
         )}
       </label>
+    </div>
+  );
+}
+
+// Dropdown with an "Other" option that opens a text box for typing details.
+export function SelectWithOther({ value, onChange, options, placeholder = "Type the details" }) {
+  const OTHER = "Other";
+  const opts = options.includes(OTHER) ? options : [...options, OTHER];
+  const isCustom = value !== undefined && value !== null && value !== "" && !opts.includes(value);
+  const [showOther, setShowOther] = React.useState(isCustom);
+
+  React.useEffect(() => {
+    if (isCustom) setShowOther(true);
+  }, [isCustom]);
+
+  return (
+    <div>
+      <select
+        value={showOther ? OTHER : (value ?? "")}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === OTHER) {
+            setShowOther(true);
+            onChange("");
+          } else {
+            setShowOther(false);
+            onChange(v);
+          }
+        }}
+      >
+        {opts.map((o) => (
+          <option key={o || "none"} value={o}>{o === "" ? "— Not set —" : o}</option>
+        ))}
+      </select>
+      {showOther && (
+        <input
+          className="text-input"
+          style={{ marginTop: 8 }}
+          placeholder={placeholder}
+          value={isCustom ? value : (value ?? "")}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
 import { ORDER_STATUS } from "@/lib/options";
-import { stagePill, formatINR } from "@/lib/status";
+import { stagePill, formatStamp } from "@/lib/status";
 
 export default function JobsPage() {
   const router = useRouter();
@@ -88,8 +88,9 @@ export default function JobsPage() {
               <div className="row-sub">{[j.product_category, j.quantity && `Qty ${j.quantity}`, j.work_type].filter(Boolean).join(" · ")}</div>
               <div className="order-foot">
                 <span style={overdue ? { color: "var(--red)", fontWeight: 700 } : {}}>Due {j.delivery_date ? String(j.delivery_date).slice(0, 10) : "—"}{overdue ? " · overdue" : ""}</span>
-                <span>{formatINR(j.price)} · {(j.payment_status || "").toLowerCase() === "yes" ? "Paid" : "Payment pending"}</span>
+                <span>{(j.payment_status || "").toLowerCase() === "yes" ? "Paid" : "Payment pending"}</span>
               </div>
+              {j.updated_at && <div className="row-sub" style={{ marginTop: 4 }}>Last updated {formatStamp(j.updated_at)}</div>}
             </Link>
           );
         })}

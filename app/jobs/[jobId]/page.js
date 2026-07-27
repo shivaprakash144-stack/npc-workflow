@@ -3,12 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
-import { Field, Select, Text } from "@/components/Field";
+import { Field, Select, Text, SelectWithOther } from "@/components/Field";
 import {
   DESIGN_STATUS, DESIGNERS, PRODUCTION_STATUS, DELIVERY_STATUS,
-  WORK_TYPES, MACHINE_TYPES, PRODUCT_TYPES, PRIORITY,
+  WORK_TYPES, MACHINE_TYPES, PRODUCT_TYPES, PRIORITY, PAYMENT,
 } from "@/lib/options";
-import { STAGES, stagePill, stageIndex, formatINR } from "@/lib/status";
+import { STAGES, stagePill, stageIndex, formatStamp } from "@/lib/status";
 
 export default function JobDetailPage() {
   const { jobId } = useParams();
@@ -48,14 +48,13 @@ export default function JobDetailPage() {
     const data = await res.json();
     setBusy(false);
     if (!res.ok) return setError(data.error || "Could not save changes");
-    setJob((j) => ({ ...j, order_status: data.order_status, payment_status: data.payment_status }));
+    setJob((j) => ({ ...j, order_status: data.order_status, payment_status: data.payment_status, history: JSON.stringify(data.history || []) }));
     setToast(`Saved · status is now ${data.order_status}`);
     setTimeout(() => setToast(""), 2500);
   }
 
   const currentIdx = job ? stageIndex(job.order_status) : -1;
   const cancelled = job && job.order_status === "Cancelled";
-  const paid = job && (job.payment_status || "").toLowerCase() === "yes";
 
   return (
     <Shell title={String(jobId)} back="/jobs">
@@ -76,6 +75,7 @@ export default function JobDetailPage() {
               <div className="order-meta">
                 {[job.mobile && `+91 ${job.mobile}`, job.order_date && `Ordered ${String(job.order_date).slice(0, 10)}`, job.priority === "Urgent" && "URGENT"].filter(Boolean).join(" · ")}
               </div>
+              {job.updated_at && <div className="order-meta">Last updated {formatStamp(job.updated_at)}</div>}
               <p className="muted" style={{ marginTop: 8 }}>Status updates automatically when Design, Production, or Delivery details are saved.</p>
             </div>
             <hr className="perforation" />
@@ -109,7 +109,7 @@ export default function JobDetailPage() {
             <div className="form-grid">
               <Field label="Customer name *"><Text value={job.customer_name} onChange={(v) => set("customer_name", v)} /></Field>
               <Field label="Mobile (10 digits) *"><Text value={job.mobile} onChange={(v) => set("mobile", v.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" /></Field>
-              <Field label="Product category"><Select value={job.product_category} onChange={(v) => set("product_category", v)} options={PRODUCT_TYPES} /></Field>
+              <Field label="Product category"><SelectWithOther value={job.product_category} onChange={(v) => set("product_category", v)} options={PRODUCT_TYPES} placeholder="Type the product details" /></Field>
               <Field label="Quantity"><Text value={job.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" /></Field>
               <Field label="Delivery date"><input className="text-input" type="date" value={job.delivery_date || ""} onChange={(e) => set("delivery_date", e.target.value)} /></Field>
               <Field label="Priority"><Select value={job.priority} onChange={(v) => set("priority", v)} options={PRIORITY} /></Field>
@@ -130,10 +130,20 @@ export default function JobDetailPage() {
             <div className="section-title"><span className="sec-dot" style={{ background: "var(--cyan)" }} />Production department</div>
             <div className="form-grid">
               <Field label="Machine type"><Select value={job.machine_type} onChange={(v) => set("machine_type", v)} options={MACHINE_TYPES} /></Field>
-              <Field label="Work type"><Select value={job.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} /></Field>
+              <Field label="Work type"><SelectWithOther value={job.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} placeholder="Type the work type" /></Field>
               <Field label="Production status" full><Select value={job.production_status} onChange={(v) => set("production_status", v)} options={PRODUCTION_STATUS} /></Field>
             </div>
             <p className="muted" style={{ marginTop: 8 }}>Production “Ready” marks the job Ready for delivery automatically.</p>
+            <div style={{ marginTop: 10 }}>
+              {job.production_complete ? (
+                <p className="muted">
+                  <span className="pill pill-key">Production complete</span>{" "}
+                  <button className="btn-ghost" style={{ marginLeft: 8 }} onClick={() => { set("production_complete", false); }}>Reopen in production</button>
+                </p>
+              ) : (
+                <button className="btn-ghost" onClick={() => { set("production_complete", true); }}>Mark production complete (hide from Production section)</button>
+              )}
+            </div>
           </section>
 
           <section className="section-card">
@@ -147,14 +157,23 @@ export default function JobDetailPage() {
           <section className="section-card">
             <div className="section-title"><span className="sec-dot" style={{ background: "var(--key)" }} />Payment</div>
             <div className="form-grid">
-              <Field label="Price (₹)"><Text value={job.price} onChange={(v) => set("price", v)} inputMode="numeric" /></Field>
-              <Field label="Advance paid (₹)"><Text value={job.advance} onChange={(v) => set("advance", v)} inputMode="numeric" /></Field>
+              <Field label="Payment received" full><Select value={job.payment_status} onChange={(v) => set("payment_status", v)} options={PAYMENT} /></Field>
             </div>
-            <p className="muted" style={{ marginTop: 10 }}>
-              Balance: <b>{formatINR(Math.max(0, (Number(job.price) || 0) - (Number(job.advance) || 0)))}</b> · Payment status (automatic):{" "}
-              <span className={`pill ${paid ? "pill-key" : "pill-red"}`}>{paid ? "Yes" : "No"}</span>
-            </p>
-            <p className="muted">It turns “Yes” automatically once Advance paid covers the full Price.</p>
+          </section>
+
+          <section className="section-card">
+            <div className="section-title"><span className="sec-dot" style={{ background: "var(--ink-60)" }} />Activity</div>
+            {(() => {
+              let h = [];
+              try { h = JSON.parse(job.history || "[]"); } catch {}
+              if (!Array.isArray(h) || h.length === 0) return <p className="muted" style={{ marginTop: 8 }}>No activity recorded yet.</p>;
+              return [...h].reverse().map((e, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, marginTop: 10, fontSize: 13 }}>
+                  <span className="job-id" style={{ whiteSpace: "nowrap" }}>{formatStamp(e.at)}</span>
+                  <span><b>{e.by}</b>{e.by ? " · " : ""}{e.text}</span>
+                </div>
+              ));
+            })()}
           </section>
 
           <div style={{ position: "sticky", bottom: "calc(78px + env(safe-area-inset-bottom))", marginTop: 16, zIndex: 24 }}>

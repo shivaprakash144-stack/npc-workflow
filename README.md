@@ -63,3 +63,12 @@ npm run dev
 - **Reports:** Dashboard → Reports → filter by From/To date, machine type, work type, status → Download Excel (.xlsx).
 - **Validation:** mandatory * fields; mobile must be exactly 10 digits for enquiries and jobs.
 - **IDs:** unchanged — J26000001 / E26000001.
+
+## v3 changes
+
+- Payment is a manual Yes/No dropdown (default No at creation); Price and Advance fields removed everywhere including the Excel report.
+- Product category and Work type dropdowns have an "Other" option that opens a text box for typing the details.
+- Activity timestamps ("Jan 26, 07:25:54", Indian time) recorded on enquiry create/update, job creation, and every status/field change, with the username. Shown as an Activity list on the job detail page and inside the enquiry edit form.
+- Reports: pie chart of jobs by status shown live as filters are applied; Excel download fixed (direct file blob).
+- Production section: "✓ Complete" button per job — marks production Ready, logs it, and removes the job from the production list. Owner/manager can reopen it from the job detail page.
+- Existing databases upgrade themselves automatically (new columns are added on first request).

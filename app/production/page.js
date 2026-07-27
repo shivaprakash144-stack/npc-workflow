@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
-import { Field, Select } from "@/components/Field";
+import { Field, Select, SelectWithOther } from "@/components/Field";
 import { PRODUCTION_STATUS, WORK_TYPES, MACHINE_TYPES } from "@/lib/options";
-import { stagePill } from "@/lib/status";
+import { stagePill, formatStamp } from "@/lib/status";
 
 export default function ProductionPage() {
   const router = useRouter();
@@ -37,21 +37,26 @@ export default function ProductionPage() {
     setEdit({ machine_type: j.machine_type || "", work_type: j.work_type || "", production_status: j.production_status || "" });
   }
 
-  async function save(jobId) {
+  async function save(jobId, extra = {}) {
     setBusy(true);
     setError("");
     const res = await fetch("/api/production", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ job_id: jobId, ...edit }),
+      body: JSON.stringify({ job_id: jobId, ...edit, ...extra }),
     });
     const data = await res.json();
     setBusy(false);
     if (!res.ok) return setError(data.error || "Could not save");
-    setToast(`Saved · job status is now ${data.order_status}`);
+    setToast(extra.complete ? "Completed · removed from production list" : `Saved · job status is now ${data.order_status}`);
     setTimeout(() => setToast(""), 2500);
     setOpen(null);
     load();
+  }
+
+  async function markComplete(j) {
+    setEdit({ machine_type: j.machine_type || "", work_type: j.work_type || "", production_status: "Ready" });
+    await save(j.job_id, { complete: true, production_status: "Ready" });
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -103,11 +108,12 @@ export default function ProductionPage() {
                 </span>
                 <span>{j.production_status || "Not started"}</span>
               </div>
+              {j.updated_at && <div className="row-sub" style={{ marginTop: 4 }}>Last updated {formatStamp(j.updated_at)}</div>}
 
               {open === j.job_id ? (
                 <div className="form-grid" style={{ marginTop: 12 }}>
                   <Field label="Machine type"><Select value={edit.machine_type} onChange={(v) => setEdit((e) => ({ ...e, machine_type: v }))} options={MACHINE_TYPES} /></Field>
-                  <Field label="Work type"><Select value={edit.work_type} onChange={(v) => setEdit((e) => ({ ...e, work_type: v }))} options={WORK_TYPES} /></Field>
+                  <Field label="Work type"><SelectWithOther value={edit.work_type} onChange={(v) => setEdit((e) => ({ ...e, work_type: v }))} options={WORK_TYPES} placeholder="Type the work type" /></Field>
                   <Field label="Production status" full><Select value={edit.production_status} onChange={(v) => setEdit((e) => ({ ...e, production_status: v }))} options={PRODUCTION_STATUS} /></Field>
                   <div className="btn-row full">
                     <button className="btn-secondary" onClick={() => setOpen(null)}>Cancel</button>
@@ -115,7 +121,10 @@ export default function ProductionPage() {
                   </div>
                 </div>
               ) : (
-                <button className="btn-ghost" style={{ marginTop: 10 }} onClick={() => openJob(j)}>Update production</button>
+                <div className="btn-row" style={{ marginTop: 10 }}>
+                  <button className="btn-ghost" onClick={() => openJob(j)}>Update production</button>
+                  <button className="btn-ghost" style={{ borderColor: "var(--ink)", fontWeight: 700 }} onClick={() => markComplete(j)} disabled={busy}>✓ Complete</button>
+                </div>
               )}
             </div>
           );

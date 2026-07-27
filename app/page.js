@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
 import { Field, Select } from "@/components/Field";
+import Pie from "@/components/Pie";
 import { ORDER_STATUS, WORK_TYPES, MACHINE_TYPES } from "@/lib/options";
 import { stagePill, stageColorVar } from "@/lib/status";
 
@@ -92,16 +93,23 @@ export default function Dashboard() {
       "Order Status": j.order_status,
       "Priority": j.priority,
       "Delivery Date": j.delivery_date ? String(j.delivery_date).slice(0, 10) : "",
-      "Price": j.price,
-      "Advance": j.advance,
       "Payment": j.payment_status,
       "Notes": j.notes,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Jobs Report");
-    const today = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `NPC-Report-${today}.xlsx`);
+    // Write to a real file blob (reliable on all browsers, opens in Excel)
+    const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `NPC-Report-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
 
   return (
@@ -149,6 +157,11 @@ export default function Dashboard() {
                 <Field label="Order status" full><Select value={rf.status} onChange={(v) => setRf((f) => ({ ...f, status: v }))} options={["All", ...ORDER_STATUS]} /></Field>
               </div>
               <p className="muted" style={{ marginTop: 10 }}>{reportRows.length} job{reportRows.length === 1 ? "" : "s"} match these filters.</p>
+              <Pie data={ORDER_STATUS.map((st) => ({
+                label: st,
+                count: reportRows.filter((j) => (j.order_status || "") === st).length,
+                color: stageColorVar(st),
+              }))} />
               <button className="btn-primary" onClick={downloadExcel} disabled={reportRows.length === 0}>Download Excel report</button>
             </div>
           </section>
