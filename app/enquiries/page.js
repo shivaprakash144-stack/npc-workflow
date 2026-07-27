@@ -34,6 +34,9 @@ export default function EnquiriesPage() {
 
   async function save() {
     if (!form.customer_name.trim()) return setError("Customer name is required");
+    if (!/^\d{10}$/.test(form.mobile.trim())) return setError("Mobile number must be exactly 10 digits");
+    if (!form.product_type) return setError("Product type is required");
+    if (!String(form.quantity).trim()) return setError("Quantity is required");
     setBusy(true);
     setError("");
     const res = await fetch("/api/enquiries", {
@@ -70,11 +73,11 @@ export default function EnquiriesPage() {
         <section className="section-card" style={{ marginTop: 16 }}>
           <div className="section-title"><span className="sec-dot" style={{ background: "var(--magenta)" }} />{editing ? `Edit ${editing}` : "New enquiry"}</div>
           <div className="form-grid">
-            <Field label="Customer name" full><Text value={form.customer_name} onChange={(v) => set("customer_name", v)} placeholder="Ramesh Kumar" /></Field>
-            <Field label="Mobile"><Text value={form.mobile} onChange={(v) => set("mobile", v)} inputMode="numeric" placeholder="9840012345" /></Field>
-            <Field label="Product type"><Select value={form.product_type} onChange={(v) => set("product_type", v)} options={PRODUCT_TYPES} /></Field>
+            <Field label="Customer name *" full><Text value={form.customer_name} onChange={(v) => set("customer_name", v)} placeholder="Ramesh Kumar" /></Field>
+            <Field label="Mobile (10 digits) *"><Text value={form.mobile} onChange={(v) => set("mobile", v.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="9840012345" /></Field>
+            <Field label="Product type *"><Select value={form.product_type} onChange={(v) => set("product_type", v)} options={PRODUCT_TYPES} /></Field>
             <Field label="Size / material"><Text value={form.size_material} onChange={(v) => set("size_material", v)} placeholder="10x6 ft flex" /></Field>
-            <Field label="Quantity"><Text value={form.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" placeholder="100" /></Field>
+            <Field label="Quantity *"><Text value={form.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" placeholder="100" /></Field>
             <Field label="Design required"><Select value={form.design_required} onChange={(v) => set("design_required", v)} options={YES_NO} /></Field>
             <Field label="Estimated price (₹)"><Text value={form.est_price} onChange={(v) => set("est_price", v)} inputMode="numeric" placeholder="1500" /></Field>
             <Field label="Status" full><Select value={form.status} onChange={(v) => set("status", v)} options={ENQUIRY_STATUS} /></Field>

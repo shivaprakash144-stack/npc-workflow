@@ -32,7 +32,7 @@ Project → Settings → Environment Variables:
 | Name | Value |
 |---|---|
 | `SESSION_SECRET` | any long random string |
-| `STAFF_USERS` | `owner:Pass@123,ravi:Pass@456,kumar:Pass@789` … up to 10 (or more) `username:password` pairs, comma separated |
+| `STAFF_USERS` | `username:password:role` triples, comma separated. Roles: `owner`, `manager` (full access + Dashboard/Reports), `staff` (Enquiries/Jobs/Production, no Dashboard), `production` (Production section only). Example: `owner:Pass1:owner,mgr:Pass2:manager,ravi:Pass3:staff,arun:Pass4:production`. Missing role = staff. |
 | `DATABASE_URL` | already added by step 3 — don't touch |
 
 To add/remove staff or change a password later: edit `STAFF_USERS` → Deployments → Redeploy.
@@ -54,3 +54,12 @@ npm install
 # put DATABASE_URL, SESSION_SECRET, STAFF_USERS in .env.local
 npm run dev
 ```
+
+## v2 behaviour notes
+
+- **Roles:** Dashboard + Reports visible only to owner/manager. `production` users see only the Production section (server-enforced).
+- **Auto status:** Design "Approved" → Production · Production Printing/Finishing/Packing → Production · Production "Ready" → Ready · Delivery "Delivered" → Delivered. Payment auto-flips to "Yes" when Advance ≥ Price.
+- **Auto flow:** every new job appears in the Production section immediately.
+- **Reports:** Dashboard → Reports → filter by From/To date, machine type, work type, status → Download Excel (.xlsx).
+- **Validation:** mandatory * fields; mobile must be exactly 10 digits for enquiries and jobs.
+- **IDs:** unchanged — J26000001 / E26000001.

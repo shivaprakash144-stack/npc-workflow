@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
-import { Field, Select, Text, FileUpload } from "@/components/Field";
+import { Field, Select, Text } from "@/components/Field";
 import {
-  ORDER_STATUS, DESIGN_STATUS, PRODUCTION_STATUS, DELIVERY_STATUS,
-  DELIVERY_METHOD, WORK_TYPES, MACHINE_TYPES, PRODUCT_TYPES, PRIORITY, PAYMENT,
+  DESIGN_STATUS, DESIGNERS, PRODUCTION_STATUS, DELIVERY_STATUS,
+  WORK_TYPES, MACHINE_TYPES, PRODUCT_TYPES, PRIORITY,
 } from "@/lib/options";
 import { STAGES, stagePill, stageIndex, formatINR } from "@/lib/status";
 
@@ -21,6 +21,7 @@ export default function JobDetailPage() {
   const load = useCallback(async () => {
     const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`, { cache: "no-store" });
     if (res.status === 401) return router.replace("/login");
+    if (res.status === 403) return router.replace("/production");
     const data = await res.json();
     if (res.status === 404) return setJob(null);
     if (!res.ok) return setError(data.error || "Could not load the job");
@@ -33,23 +34,28 @@ export default function JobDetailPage() {
 
   function set(k, v) { setJob((j) => ({ ...j, [k]: v })); }
 
-  async function save() {
+  async function save(extra = {}) {
+    if (!/^\d{10}$/.test(String(job.mobile || "").trim())) {
+      return setError("Mobile number must be exactly 10 digits");
+    }
     setBusy(true);
     setError("");
     const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(job),
+      body: JSON.stringify({ ...job, cancelled: job.order_status === "Cancelled", ...extra }),
     });
     const data = await res.json();
     setBusy(false);
     if (!res.ok) return setError(data.error || "Could not save changes");
-    setToast("Saved");
-    setTimeout(() => setToast(""), 2000);
+    setJob((j) => ({ ...j, order_status: data.order_status, payment_status: data.payment_status }));
+    setToast(`Saved · status is now ${data.order_status}`);
+    setTimeout(() => setToast(""), 2500);
   }
 
   const currentIdx = job ? stageIndex(job.order_status) : -1;
   const cancelled = job && job.order_status === "Cancelled";
+  const paid = job && (job.payment_status || "").toLowerCase() === "yes";
 
   return (
     <Shell title={String(jobId)} back="/jobs">
@@ -70,6 +76,7 @@ export default function JobDetailPage() {
               <div className="order-meta">
                 {[job.mobile && `+91 ${job.mobile}`, job.order_date && `Ordered ${String(job.order_date).slice(0, 10)}`, job.priority === "Urgent" && "URGENT"].filter(Boolean).join(" · ")}
               </div>
+              <p className="muted" style={{ marginTop: 8 }}>Status updates automatically when Design, Production, or Delivery details are saved.</p>
             </div>
             <hr className="perforation" />
             <div className="ticket-body">
@@ -88,9 +95,7 @@ export default function JobDetailPage() {
                           </div>
                           {i < STAGES.length - 1 && <div className="stage-line" />}
                         </div>
-                        <div>
-                          <div className="stage-title">{stage}</div>
-                        </div>
+                        <div><div className="stage-title">{stage}</div></div>
                       </div>
                     );
                   })}
@@ -102,13 +107,12 @@ export default function JobDetailPage() {
           <section className="section-card">
             <div className="section-title"><span className="sec-dot" style={{ background: "var(--ink)" }} />Job card</div>
             <div className="form-grid">
-              <Field label="Customer name"><Text value={job.customer_name} onChange={(v) => set("customer_name", v)} /></Field>
-              <Field label="Mobile"><Text value={job.mobile} onChange={(v) => set("mobile", v)} inputMode="numeric" /></Field>
+              <Field label="Customer name *"><Text value={job.customer_name} onChange={(v) => set("customer_name", v)} /></Field>
+              <Field label="Mobile (10 digits) *"><Text value={job.mobile} onChange={(v) => set("mobile", v.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" /></Field>
               <Field label="Product category"><Select value={job.product_category} onChange={(v) => set("product_category", v)} options={PRODUCT_TYPES} /></Field>
               <Field label="Quantity"><Text value={job.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" /></Field>
               <Field label="Delivery date"><input className="text-input" type="date" value={job.delivery_date || ""} onChange={(e) => set("delivery_date", e.target.value)} /></Field>
               <Field label="Priority"><Select value={job.priority} onChange={(v) => set("priority", v)} options={PRIORITY} /></Field>
-              <Field label="Order status" full><Select value={job.order_status} onChange={(v) => set("order_status", v)} options={ORDER_STATUS} /></Field>
               <Field label="Notes" full><textarea rows={2} value={job.notes || ""} onChange={(e) => set("notes", e.target.value)} /></Field>
             </div>
           </section>
@@ -116,12 +120,10 @@ export default function JobDetailPage() {
           <section className="section-card">
             <div className="section-title"><span className="sec-dot" style={{ background: "var(--magenta)" }} />Design department</div>
             <div className="form-grid">
-              <Field label="Designer name"><Text value={job.designer_name} onChange={(v) => set("designer_name", v)} placeholder="Designer" /></Field>
+              <Field label="Designer"><Select value={job.designer_name} onChange={(v) => set("designer_name", v)} options={DESIGNERS} /></Field>
               <Field label="Design status"><Select value={job.design_status} onChange={(v) => set("design_status", v)} options={DESIGN_STATUS} /></Field>
-              <Field label="Design file (image or PDF, under 2 MB)" full>
-                <FileUpload label="Upload design file" value={job.design_file} onChange={(v) => set("design_file", v)} />
-              </Field>
             </div>
+            <p className="muted" style={{ marginTop: 8 }}>Approved design moves the job to Production automatically.</p>
           </section>
 
           <section className="section-card">
@@ -131,16 +133,15 @@ export default function JobDetailPage() {
               <Field label="Work type"><Select value={job.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} /></Field>
               <Field label="Production status" full><Select value={job.production_status} onChange={(v) => set("production_status", v)} options={PRODUCTION_STATUS} /></Field>
             </div>
+            <p className="muted" style={{ marginTop: 8 }}>Production “Ready” marks the job Ready for delivery automatically.</p>
           </section>
 
           <section className="section-card">
             <div className="section-title"><span className="sec-dot" style={{ background: "var(--yellow)" }} />Delivery / dispatch</div>
             <div className="form-grid">
-              <Field label="Delivery method"><Select value={job.delivery_method} onChange={(v) => set("delivery_method", v)} options={DELIVERY_METHOD} /></Field>
-              <Field label="Delivery status"><Select value={job.delivery_status} onChange={(v) => set("delivery_status", v)} options={DELIVERY_STATUS} /></Field>
-              <Field label="Courier name"><Text value={job.courier_name} onChange={(v) => set("courier_name", v)} placeholder="DTDC" /></Field>
-              <Field label="Tracking number"><Text value={job.tracking_number} onChange={(v) => set("tracking_number", v)} /></Field>
+              <Field label="Delivery status" full><Select value={job.delivery_status} onChange={(v) => set("delivery_status", v)} options={DELIVERY_STATUS} /></Field>
             </div>
+            <p className="muted" style={{ marginTop: 8 }}>“Delivered” completes the job automatically.</p>
           </section>
 
           <section className="section-card">
@@ -148,15 +149,24 @@ export default function JobDetailPage() {
             <div className="form-grid">
               <Field label="Price (₹)"><Text value={job.price} onChange={(v) => set("price", v)} inputMode="numeric" /></Field>
               <Field label="Advance paid (₹)"><Text value={job.advance} onChange={(v) => set("advance", v)} inputMode="numeric" /></Field>
-              <Field label="Payment received" full><Select value={job.payment_status} onChange={(v) => set("payment_status", v)} options={PAYMENT} /></Field>
             </div>
-            <p className="muted" style={{ marginTop: 8 }}>
-              Balance: {formatINR(Math.max(0, (Number(job.price) || 0) - (Number(job.advance) || 0)))}
+            <p className="muted" style={{ marginTop: 10 }}>
+              Balance: <b>{formatINR(Math.max(0, (Number(job.price) || 0) - (Number(job.advance) || 0)))}</b> · Payment status (automatic):{" "}
+              <span className={`pill ${paid ? "pill-key" : "pill-red"}`}>{paid ? "Yes" : "No"}</span>
             </p>
+            <p className="muted">It turns “Yes” automatically once Advance paid covers the full Price.</p>
           </section>
 
           <div style={{ position: "sticky", bottom: "calc(78px + env(safe-area-inset-bottom))", marginTop: 16, zIndex: 24 }}>
-            <button className="btn-primary" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save all changes"}</button>
+            <button className="btn-primary" onClick={() => save()} disabled={busy}>{busy ? "Saving…" : "Save all changes"}</button>
+          </div>
+
+          <div className="btn-row" style={{ marginTop: 12 }}>
+            {cancelled ? (
+              <button className="btn-secondary" onClick={() => { set("order_status", ""); save({ cancelled: false }); }} disabled={busy}>Reactivate job</button>
+            ) : (
+              <button className="btn-secondary btn-danger-ghost" onClick={() => { set("order_status", "Cancelled"); save({ cancelled: true }); }} disabled={busy}>Cancel this job</button>
+            )}
           </div>
         </>
       )}
