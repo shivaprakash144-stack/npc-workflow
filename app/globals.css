@@ -385,7 +385,7 @@ body::after {
   bottom: 40px; left: -110px;
   border: 22px solid rgba(214, 36, 122, 0.06);
 }
-.shell, .topbar, .tabbar, .login-wrap { position: relative; z-index: 1; }
+.shell, .login-wrap { position: relative; z-index: 1; }
 
 /* Glassy header + tab bar */
 .topbar { background: rgba(251, 250, 246, 0.78); backdrop-filter: blur(12px); }
@@ -503,8 +503,9 @@ button.stat-card:hover { box-shadow: 0 4px 10px rgba(23,23,28,0.08), 0 14px 34px
 }
 
 /* Centered brand header (logo + Workhub in the middle, fixed on every page) */
-.topbar { position: fixed; top: 0; left: 0; right: 0; }
-.shell { padding-top: 86px; }
+.topbar { position: fixed !important; top: 0; left: 0; right: 0; z-index: 40; }
+.tabbar { position: fixed !important; bottom: 0; left: 0; right: 0; z-index: 40; }
+.shell { padding-top: 92px; }
 .topbar-grid { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
 .tb-left { justify-self: start; }
 .tb-right { justify-self: end; }
