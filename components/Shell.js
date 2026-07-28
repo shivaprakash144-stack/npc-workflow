@@ -45,21 +45,19 @@ export default function Shell({ title, children, back }) {
     <>
       <header className="topbar">
         <div className="cmyk-strip" aria-hidden="true"><span /><span /><span /><span /></div>
-        <div className="topbar-inner">
-          {back ? (
-            <Link href={back} className="btn-ghost">← Back</Link>
-          ) : (
-            <div className="brand">
-              <img src="/logo.png" alt="NPC — New Print Creations" className="brand-logo" />
-              <div>
-                <div className="brand-name">{title || "Workhub"}</div>
-                <div className="brand-sub">Workhub</div>
-              </div>
-            </div>
-          )}
-          {back ? <div className="brand-sub">{title}</div> : (
-            <button className="btn-ghost" onClick={logout}>Sign out</button>
-          )}
+        <div className="topbar-inner topbar-grid">
+          <div className="tb-left">
+            {back ? <Link href={back} className="btn-ghost">← Back</Link> : null}
+          </div>
+          <div className="brand brand-center">
+            <img src="/logo.png" alt="NPC — New Print Creations" className="brand-logo" />
+            <div className="brand-name">Workhub</div>
+          </div>
+          <div className="tb-right">
+            {back ? <span className="brand-sub">{title}</span> : (
+              <button className="btn-ghost" onClick={logout}>Sign out</button>
+            )}
+          </div>
         </div>
       </header>
       <main className="shell">{children}</main>

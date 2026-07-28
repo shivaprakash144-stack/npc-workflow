@@ -41,8 +41,10 @@ export default function LoginPage() {
       <div className="login-card">
         <div className="cmyk-strip" aria-hidden="true"><span /><span /><span /><span /></div>
         <div className="login-inner">
-          <img src="/logo.png" alt="NPC — New Print Creations" className="login-brand" />
-          <h1 className="login-title">Workhub</h1>
+          <div className="login-center">
+            <img src="/logo.png" alt="NPC — New Print Creations" className="login-brand" />
+            <h1 className="login-title" style={{ marginTop: 14 }}>Workhub</h1>
+          </div>
 
           <div className="field">
             <label className="f-label" htmlFor="user">Username</label>

@@ -500,11 +500,14 @@ button.stat-card:hover { box-shadow: 0 4px 10px rgba(23,23,28,0.08), 0 14px 34px
 @media (min-width: 1100px) {
   .shell { max-width: 1000px; }
   .topbar-inner { max-width: 1000px; }
-  .tabbar {
-    left: 50%; right: auto; transform: translateX(-50%);
-    width: 560px; bottom: 14px; border: 0.5px solid var(--line);
-    border-radius: 18px; box-shadow: 0 10px 34px rgba(23, 23, 28, 0.14);
-    padding: 8px 10px;
-  }
-  .fab { right: calc(50% - 500px); }
 }
+
+/* Centered brand header (logo + Workhub in the middle, fixed on every page) */
+.topbar { position: fixed; top: 0; left: 0; right: 0; }
+.shell { padding-top: 86px; }
+.topbar-grid { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+.tb-left { justify-self: start; }
+.tb-right { justify-self: end; }
+.brand-center { display: flex; align-items: center; gap: 10px; justify-content: center; }
+.login-center { text-align: center; }
+.login-center .login-brand { margin: 0 auto; }
