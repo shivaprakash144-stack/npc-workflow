@@ -72,3 +72,13 @@ npm run dev
 - Reports: pie chart of jobs by status shown live as filters are applied; Excel download fixed (direct file blob).
 - Production section: "✓ Complete" button per job — marks production Ready, logs it, and removes the job from the production list. Owner/manager can reopen it from the job detail page.
 - Existing databases upgrade themselves automatically (new columns are added on first request).
+
+## v5 changes
+
+- Dashboard stat numbers are hyperlinks: tap any card and the matching orders/enquiries open on the dashboard itself (tap again or ✕ to close). New "Review pending" card added.
+- Google review section on each job (active after Delivered): tick "Google review completed" — logged in Activity with time and user. "Ask for review on WhatsApp" one-tap message. Review Done/Pending badge on delivered jobs and a "Google Review" column in Excel.
+- "Ready" notifications: one-tap "Send WhatsApp — order ready" and "Send SMS" buttons on Ready jobs (detail + list) with a pre-filled message to the customer's number. Fully-automatic sending would require Meta WhatsApp Business API / SMS DLT approval — deliberately avoided.
+- "Download ALL job cards (Excel)" button on the dashboard — always contains every job automatically.
+- Cancel/Reactivate is owner & manager only (hidden for others and blocked on the server).
+- Job/Enquiry ID prefix now follows the Indian FINANCIAL year: J26 = Apr 1 2026 – Mar 31 2027; changes to J27 on April 1, 2027 (not Jan 1). Numbering restarts each FY.
+- Jobs panel status filter made case/space-insensitive so Cancelled jobs always appear under the Cancelled chip.

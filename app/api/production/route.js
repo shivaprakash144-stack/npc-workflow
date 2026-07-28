@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/auth";
 import { sql, ensureSchema } from "@/lib/db";
 import { deriveOrderStatus } from "@/lib/derive";
 import { entry, parseHistory } from "@/lib/history";
+import { sendOrderReadyWhatsApp, waConfigured } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,16 @@ export async function PATCH(req) {
     }
     if (String(j.order_status) !== orderStatus) history.push(entry(s.user, `Job status: ${j.order_status} → ${orderStatus}`));
     if (complete && !j.production_complete) history.push(entry(s.user, "Marked complete (removed from production)"));
+
+    // Auto WhatsApp when the job just became Ready
+    if (orderStatus === "Ready" && j.order_status !== "Ready" && waConfigured()) {
+      const wa = await sendOrderReadyWhatsApp({
+        mobile: j.mobile, customerName: j.customer_name, jobId: j.job_id, product: j.product_category,
+      });
+      history.push(entry("system", wa.ok
+        ? `WhatsApp sent automatically to +91 ${String(j.mobile || "").trim()} (order ready)`
+        : `WhatsApp auto-send failed: ${wa.detail || "unknown"} — use the manual button`));
+    }
 
     await q`UPDATE jobs SET machine_type=${merged.machine_type}, work_type=${merged.work_type}, production_status=${merged.production_status}, order_status=${orderStatus}, production_complete=${complete}, history=${JSON.stringify(history)}, updated_at=now() WHERE job_id=${b.job_id}`;
     return NextResponse.json({ ok: true, order_status: orderStatus, complete });

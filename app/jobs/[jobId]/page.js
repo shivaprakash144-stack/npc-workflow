@@ -17,6 +17,12 @@ export default function JobDetailPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState("");
+  const [role, setRole] = useState("staff");
+
+  useEffect(() => {
+    const m = document.cookie.match(/(?:^|;\s*)npc_role=([^;]+)/);
+    if (m) setRole(m[1]);
+  }, []);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`, { cache: "no-store" });
@@ -76,6 +82,15 @@ export default function JobDetailPage() {
                 {[job.mobile && `+91 ${job.mobile}`, job.order_date && `Ordered ${String(job.order_date).slice(0, 10)}`, job.priority === "Urgent" && "URGENT"].filter(Boolean).join(" · ")}
               </div>
               {job.updated_at && <div className="order-meta">Last updated {formatStamp(job.updated_at)}</div>}
+              {job.order_status === "Ready" && /^\d{10}$/.test(String(job.mobile || "")) && (
+                <div className="btn-row" style={{ marginTop: 12 }}>
+                  <a className="btn-ghost" style={{ textAlign: "center", background: "#e7f8ee", borderColor: "#1f9d55", color: "#146c3a", fontWeight: 700 }}
+                    href={`https://wa.me/91${job.mobile}?text=${encodeURIComponent(`Hi ${job.customer_name}, your order ${job.job_id} (${job.product_category}) is READY at NPC Prints & Gifts. Please collect it or await delivery. Thank you!`)}`}
+                    target="_blank" rel="noopener noreferrer">Send WhatsApp — order ready</a>
+                  <a className="btn-ghost" style={{ textAlign: "center" }}
+                    href={`sms:+91${job.mobile}?body=${encodeURIComponent(`Hi ${job.customer_name}, your order ${job.job_id} (${job.product_category}) is READY at NPC Prints & Gifts. Thank you!`)}`}>Send SMS</a>
+                </div>
+              )}
               <p className="muted" style={{ marginTop: 8 }}>Status updates automatically when Design, Production, or Delivery details are saved.</p>
             </div>
             <hr className="perforation" />
@@ -162,6 +177,28 @@ export default function JobDetailPage() {
           </section>
 
           <section className="section-card">
+            <div className="section-title"><span className="sec-dot" style={{ background: "#1f9d55" }} />Google review (after delivery)</div>
+            {job.order_status !== "Delivered" && !job.review_done ? (
+              <p className="muted" style={{ marginTop: 8 }}>Follow up for a Google review once the job is Delivered.</p>
+            ) : (
+              <>
+                <label style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, cursor: "pointer", fontWeight: 600 }}>
+                  <input type="checkbox" style={{ width: 20, height: 20, accentColor: "#1f9d55" }}
+                    checked={!!job.review_done}
+                    onChange={(e) => set("review_done", e.target.checked)} />
+                  Google review completed
+                </label>
+                {/^\d{10}$/.test(String(job.mobile || "")) && !job.review_done && (
+                  <a className="btn-ghost" style={{ display: "inline-block", marginTop: 12, background: "#e7f8ee", borderColor: "#1f9d55", color: "#146c3a", fontWeight: 700 }}
+                    href={`https://wa.me/91${job.mobile}?text=${encodeURIComponent(`Hi ${job.customer_name}, thank you for choosing NPC Prints & Gifts! We would love your feedback — please leave us a Google review. It takes just a minute!`)}`}
+                    target="_blank" rel="noopener noreferrer">Ask for review on WhatsApp</a>
+                )}
+                <p className="muted" style={{ marginTop: 8 }}>Tick the box after the customer posts the review, then Save. It is recorded in Activity with the time.</p>
+              </>
+            )}
+          </section>
+
+          <section className="section-card">
             <div className="section-title"><span className="sec-dot" style={{ background: "var(--ink-60)" }} />Activity</div>
             {(() => {
               let h = [];
@@ -180,13 +217,15 @@ export default function JobDetailPage() {
             <button className="btn-primary" onClick={() => save()} disabled={busy}>{busy ? "Saving…" : "Save all changes"}</button>
           </div>
 
-          <div className="btn-row" style={{ marginTop: 12 }}>
-            {cancelled ? (
-              <button className="btn-secondary" onClick={() => { set("order_status", ""); save({ cancelled: false }); }} disabled={busy}>Reactivate job</button>
-            ) : (
-              <button className="btn-secondary btn-danger-ghost" onClick={() => { set("order_status", "Cancelled"); save({ cancelled: true }); }} disabled={busy}>Cancel this job</button>
-            )}
-          </div>
+          {["owner", "manager"].includes(role) && (
+            <div className="btn-row" style={{ marginTop: 12 }}>
+              {cancelled ? (
+                <button className="btn-secondary" onClick={() => { set("order_status", ""); save({ cancelled: false }); }} disabled={busy}>Reactivate job</button>
+              ) : (
+                <button className="btn-secondary btn-danger-ghost" onClick={() => { set("order_status", "Cancelled"); save({ cancelled: true }); }} disabled={busy}>Cancel this job (owner/manager)</button>
+              )}
+            </div>
+          )}
         </>
       )}
     </Shell>

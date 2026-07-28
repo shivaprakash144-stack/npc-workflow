@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth";
 import { sql, ensureSchema } from "@/lib/db";
 import { deriveOrderStatus, isValidMobile } from "@/lib/derive";
 import { entry, parseHistory, jobChanges } from "@/lib/history";
+import { sendOrderReadyWhatsApp, waConfigured } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +37,16 @@ export async function PATCH(req, { params }) {
     if (!rows.length) return NextResponse.json({ error: "Job not found" }, { status: 404 });
     const oldJ = rows[0];
 
+    // Cancel / reactivate: owner and manager only
+    const wasCancelled = oldJ.order_status === "Cancelled";
+    const wantCancelled = !!b.cancelled;
+    if (wantCancelled !== wasCancelled && !["owner", "manager"].includes(s.role)) {
+      return NextResponse.json({ error: "Only the owner or manager can cancel or reactivate a job" }, { status: 403 });
+    }
+
     const payment = b.payment_status === "Yes" ? "Yes" : "No";
-    const orderStatus = b.cancelled ? "Cancelled" : deriveOrderStatus(b);
+    const orderStatus = wantCancelled ? "Cancelled" : deriveOrderStatus(b);
+    const reviewDone = typeof b.review_done === "boolean" ? b.review_done : !!oldJ.review_done;
     const prodComplete = typeof b.production_complete === "boolean" ? b.production_complete : !!oldJ.production_complete;
 
     const history = parseHistory(oldJ.history);
@@ -47,6 +56,19 @@ export async function PATCH(req, { params }) {
     if (!b.cancelled && oldJ.order_status === "Cancelled") history.push(entry(s.user, "Job reactivated"));
     if (prodComplete !== !!oldJ.production_complete) {
       history.push(entry(s.user, prodComplete ? "Marked complete (removed from production)" : "Reopened in production"));
+    }
+    if (reviewDone !== !!oldJ.review_done) {
+      history.push(entry(s.user, reviewDone ? "Google review completed ✓" : "Google review unmarked"));
+    }
+
+    // Auto WhatsApp when the job just became Ready
+    if (orderStatus === "Ready" && oldJ.order_status !== "Ready" && waConfigured()) {
+      const wa = await sendOrderReadyWhatsApp({
+        mobile: b.mobile, customerName: b.customer_name, jobId: params.jobId, product: b.product_category,
+      });
+      history.push(entry("system", wa.ok
+        ? `WhatsApp sent automatically to +91 ${String(b.mobile).trim()} (order ready)`
+        : `WhatsApp auto-send failed: ${wa.detail || "unknown"} — use the manual button`));
     }
 
     await q`UPDATE jobs SET
@@ -59,6 +81,7 @@ export async function PATCH(req, { params }) {
       machine_type=${b.machine_type || ""}, work_type=${b.work_type || ""}, production_status=${b.production_status || ""},
       delivery_status=${b.delivery_status || ""},
       production_complete=${prodComplete},
+      review_done=${reviewDone},
       notes=${b.notes || ""},
       history=${JSON.stringify(history)},
       updated_at=now()

@@ -33,7 +33,7 @@ export default function JobsPage() {
 
   const filtered = useMemo(() => {
     let list = jobs || [];
-    if (filter !== "All") list = list.filter((j) => (j.order_status || "") === filter);
+    if (filter !== "All") list = list.filter((j) => String(j.order_status || "").trim().toLowerCase() === filter.toLowerCase());
     if (from) list = list.filter((j) => (j.order_date || "").slice(0, 10) >= from);
     if (to) list = list.filter((j) => (j.order_date || "").slice(0, 10) <= to);
     const q = query.trim().toLowerCase();
@@ -91,6 +91,20 @@ export default function JobsPage() {
                 <span>{(j.payment_status || "").toLowerCase() === "yes" ? "Paid" : "Payment pending"}</span>
               </div>
               {j.updated_at && <div className="row-sub" style={{ marginTop: 4 }}>Last updated {formatStamp(j.updated_at)}</div>}
+              {j.order_status === "Ready" && /^\d{10}$/.test(String(j.mobile || "")) && (
+                <span
+                  className="btn-ghost"
+                  style={{ display: "inline-block", marginTop: 8, background: "#e7f8ee", borderColor: "#1f9d55", color: "#146c3a", fontWeight: 700 }}
+                  role="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open(`https://wa.me/91${j.mobile}?text=${encodeURIComponent(`Hi ${j.customer_name}, your order ${j.job_id} (${j.product_category}) is READY at NPC Prints & Gifts. Please collect it or await delivery. Thank you!`)}`, "_blank");
+                  }}
+                >WhatsApp: order ready</span>
+              )}
+              {j.order_status === "Delivered" && (
+                <span className={`pill ${j.review_done ? "pill-key" : "pill-yellow"}`} style={{ marginTop: 8 }}>{j.review_done ? "Review done ✓" : "Review pending"}</span>
+              )}
             </Link>
           );
         })}

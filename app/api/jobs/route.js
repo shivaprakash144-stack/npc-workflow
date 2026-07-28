@@ -13,7 +13,7 @@ export async function GET() {
   try {
     await ensureSchema();
     const q = sql();
-    const jobs = await q`SELECT job_id, enquiry_id, customer_name, mobile, product_category, quantity, payment_status, order_date, delivery_date, priority, order_status, design_status, designer_name, machine_type, production_status, delivery_status, work_type, production_complete, notes, created_at, updated_at FROM jobs ORDER BY created_at DESC`;
+    const jobs = await q`SELECT job_id, enquiry_id, customer_name, mobile, product_category, quantity, payment_status, order_date, delivery_date, priority, order_status, design_status, designer_name, machine_type, production_status, delivery_status, work_type, production_complete, review_done, notes, created_at, updated_at FROM jobs ORDER BY created_at DESC`;
     return NextResponse.json({ jobs, syncedAt: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 502 });

@@ -7,13 +7,29 @@ import Shell from "@/components/Shell";
 import { Field, Select } from "@/components/Field";
 import Pie from "@/components/Pie";
 import { ORDER_STATUS, WORK_TYPES, MACHINE_TYPES } from "@/lib/options";
-import { stagePill, stageColorVar } from "@/lib/status";
+import { stagePill, stageColorVar, formatStamp } from "@/lib/status";
+
+const today = () => new Date().toISOString().slice(0, 10);
+const st = (v) => (v || "").toLowerCase();
+
+const DRILLS = {
+  today: { label: "Today's orders", accent: "var(--ink)", fn: (j) => (j.order_date || "").slice(0, 10) === today() },
+  designPending: { label: "Design pending", accent: "var(--magenta)", fn: (j) => ["design pending", "design approval"].includes(st(j.order_status)) },
+  production: { label: "Production pending", accent: "var(--cyan)", fn: (j) => st(j.order_status) === "production" },
+  ready: { label: "Ready for delivery", accent: "var(--yellow)", fn: (j) => st(j.order_status) === "ready" },
+  pendingPay: { label: "Pending payment", accent: "var(--red)", fn: (j) => st(j.payment_status) !== "yes" && st(j.order_status) !== "cancelled" },
+  overdue: { label: "Overdue deliveries", accent: "var(--red)", fn: (j) => j.delivery_date && String(j.delivery_date).slice(0, 10) < today() && !["delivered", "cancelled"].includes(st(j.order_status)) },
+  reviewPending: { label: "Review pending", accent: "var(--yellow)", fn: (j) => st(j.order_status) === "delivered" && !j.review_done },
+  delivered: { label: "Completed orders", accent: "var(--key)", fn: (j) => st(j.order_status) === "delivered" },
+  newEnq: { label: "New enquiries", accent: "var(--magenta)", fn: null }, // enquiries drill
+};
 
 export default function Dashboard() {
   const router = useRouter();
   const [jobs, setJobs] = useState(null);
   const [enquiries, setEnquiries] = useState([]);
   const [error, setError] = useState("");
+  const [drill, setDrill] = useState(null);
   const [rf, setRf] = useState({ from: "", to: "", machine: "", work: "", status: "All" });
 
   const load = useCallback(async () => {
@@ -43,27 +59,41 @@ export default function Dashboard() {
     return () => clearInterval(t);
   }, [load]);
 
-  const s = useMemo(() => {
+  const counts = useMemo(() => {
     const list = jobs || [];
-    const today = new Date().toISOString().slice(0, 10);
-    const st = (v) => (v || "").toLowerCase();
-    const by = (name) => list.filter((j) => st(j.order_status) === name.toLowerCase()).length;
-    return {
-      today: list.filter((j) => (j.order_date || "").slice(0, 10) === today).length,
-      designPending: by("Design Pending") + by("Design Approval"),
-      production: by("Production"),
-      ready: by("Ready"),
-      delivered: by("Delivered"),
-      pendingPay: list.filter((j) => st(j.payment_status) !== "yes" && st(j.order_status) !== "cancelled").length,
-      overdue: list.filter((j) => j.delivery_date && String(j.delivery_date).slice(0, 10) < today && !["delivered", "cancelled"].includes(st(j.order_status))).length,
-      newEnq: enquiries.filter((e) => (e.status || "") === "New Enquiry").length,
-      total: list.length,
-      pending: list.filter((j) => !["delivered", "cancelled"].includes(st(j.order_status))).length,
-      byStage: ORDER_STATUS.filter((x) => x !== "Cancelled").map((stage) => ({ stage, count: by(stage) })),
-    };
+    const c = {};
+    for (const key of Object.keys(DRILLS)) {
+      c[key] = key === "newEnq"
+        ? enquiries.filter((e) => (e.status || "") === "New Enquiry").length
+        : list.filter(DRILLS[key].fn).length;
+    }
+    return c;
   }, [jobs, enquiries]);
 
-  const maxStage = Math.max(1, ...s.byStage.map((x) => x.count));
+  const drillJobs = useMemo(() => {
+    if (!drill || drill === "newEnq" || !jobs) return [];
+    return jobs.filter(DRILLS[drill].fn);
+  }, [drill, jobs]);
+
+  const drillEnqs = useMemo(() => {
+    if (drill !== "newEnq") return [];
+    return enquiries.filter((e) => (e.status || "") === "New Enquiry");
+  }, [drill, enquiries]);
+
+  const summary = useMemo(() => {
+    const list = jobs || [];
+    return {
+      total: list.length,
+      delivered: list.filter((j) => st(j.order_status) === "delivered").length,
+      pending: list.filter((j) => !["delivered", "cancelled"].includes(st(j.order_status))).length,
+      byStage: ORDER_STATUS.filter((x) => x !== "Cancelled").map((stage) => ({
+        stage,
+        count: list.filter((j) => st(j.order_status) === stage.toLowerCase()).length,
+      })),
+    };
+  }, [jobs]);
+
+  const maxStage = Math.max(1, ...summary.byStage.map((x) => x.count));
 
   const reportRows = useMemo(() => {
     let list = jobs || [];
@@ -75,9 +105,8 @@ export default function Dashboard() {
     return list;
   }, [jobs, rf]);
 
-  async function downloadExcel() {
-    const XLSX = await import("xlsx");
-    const rows = reportRows.map((j) => ({
+  function jobToRow(j) {
+    return {
       "Job ID": j.job_id,
       "Order Date": (j.order_date || "").slice(0, 10),
       "Customer": j.customer_name,
@@ -94,18 +123,23 @@ export default function Dashboard() {
       "Priority": j.priority,
       "Delivery Date": j.delivery_date ? String(j.delivery_date).slice(0, 10) : "",
       "Payment": j.payment_status,
+      "Google Review": st(j.order_status) === "delivered" ? (j.review_done ? "Done" : "Pending") : "",
+      "Last Updated": j.updated_at ? formatStamp(j.updated_at) : "",
       "Notes": j.notes,
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
+    };
+  }
+
+  async function downloadExcel(rows, name) {
+    const XLSX = await import("xlsx");
+    const ws = XLSX.utils.json_to_sheet(rows.map(jobToRow));
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Jobs Report");
-    // Write to a real file blob (reliable on all browsers, opens in Excel)
+    XLSX.utils.book_append_sheet(wb, ws, "Jobs");
     const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `NPC-Report-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.download = `${name}-${new Date().toISOString().slice(0, 10)}.xlsx`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -119,24 +153,84 @@ export default function Dashboard() {
       {jobs && (
         <>
           <section className="section">
-            <div className="eyebrow">Today at a glance</div>
+            <div className="eyebrow">Today at a glance · tap a card to see the orders</div>
             <div className="stat-grid">
-              <div className="stat-card" style={{ "--accent": "var(--ink)" }}><div className="stat-num">{s.today}</div><div className="stat-label">Today&apos;s orders</div></div>
-              <div className="stat-card" style={{ "--accent": "var(--magenta)" }}><div className="stat-num">{s.designPending}</div><div className="stat-label">Design pending</div></div>
-              <div className="stat-card" style={{ "--accent": "var(--cyan)" }}><div className="stat-num">{s.production}</div><div className="stat-label">Production pending</div></div>
-              <div className="stat-card" style={{ "--accent": "var(--yellow)" }}><div className="stat-num">{s.ready}</div><div className="stat-label">Ready for delivery</div></div>
-              <div className="stat-card" style={{ "--accent": "var(--red)" }}><div className="stat-num">{s.pendingPay}</div><div className="stat-label">Pending payment</div></div>
-              <div className="stat-card" style={{ "--accent": "var(--red)" }}><div className="stat-num">{s.overdue}</div><div className="stat-label">Overdue deliveries</div></div>
-              <div className="stat-card" style={{ "--accent": "var(--magenta)" }}><div className="stat-num">{s.newEnq}</div><div className="stat-label">New enquiries</div></div>
-              <div className="stat-card" style={{ "--accent": "var(--key)" }}><div className="stat-num">{s.delivered}</div><div className="stat-label">Completed orders</div></div>
+              {Object.entries(DRILLS).map(([key, d]) => (
+                <button
+                  key={key}
+                  className="stat-card"
+                  onClick={() => setDrill(drill === key ? null : key)}
+                  style={{
+                    "--accent": d.accent,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    border: drill === key ? "2px solid var(--ink)" : "1px solid var(--line)",
+                  }}
+                >
+                  <div className="stat-num" style={{ textDecoration: "underline", textDecorationThickness: 2, textUnderlineOffset: 4 }}>
+                    {counts[key]}
+                  </div>
+                  <div className="stat-label">{d.label}</div>
+                </button>
+              ))}
             </div>
           </section>
+
+          {drill && (
+            <section className="section">
+              <div className="row-top">
+                <div className="eyebrow">{DRILLS[drill].label} ({drill === "newEnq" ? drillEnqs.length : drillJobs.length})</div>
+                <button className="btn-ghost" onClick={() => setDrill(null)}>✕ Close</button>
+              </div>
+
+              {drill === "newEnq" ? (
+                <>
+                  {drillEnqs.length === 0 && <div className="empty">No new enquiries right now.</div>}
+                  {drillEnqs.map((e) => (
+                    <Link href="/enquiries" className="list-row" key={e.enquiry_id}>
+                      <div className="row-top">
+                        <span className="job-id">{e.enquiry_id}</span>
+                        <span className="pill pill-magenta">{e.status}</span>
+                      </div>
+                      <div className="row-title">{e.customer_name}</div>
+                      <div className="row-sub">{[e.product_type, e.quantity && `Qty ${e.quantity}`].filter(Boolean).join(" · ")}</div>
+                    </Link>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {drillJobs.length === 0 && <div className="empty">No jobs in this list right now.</div>}
+                  {drillJobs.map((j) => (
+                    <Link href={`/jobs/${j.job_id}`} className="list-row" key={j.job_id}>
+                      <div className="row-top">
+                        <span className="job-id">{j.job_id}</span>
+                        <span style={{ display: "flex", gap: 6 }}>
+                          {j.priority === "Urgent" && <span className="pill pill-urgent">Urgent</span>}
+                          <span className={`pill ${stagePill(j.order_status)}`}><span className="dot" />{j.order_status}</span>
+                        </span>
+                      </div>
+                      <div className="row-title">{j.customer_name}</div>
+                      <div className="row-sub">{[j.product_category, j.quantity && `Qty ${j.quantity}`].filter(Boolean).join(" · ")}</div>
+                      <div className="order-foot">
+                        <span>Due {j.delivery_date ? String(j.delivery_date).slice(0, 10) : "—"}</span>
+                        <span>
+                          {drill === "reviewPending" || drill === "delivered"
+                            ? (j.review_done ? "Review done ✓" : "Review pending")
+                            : ((j.payment_status || "").toLowerCase() === "yes" ? "Paid" : "Payment pending")}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </>
+              )}
+            </section>
+          )}
 
           <section className="section">
             <div className="eyebrow">Analytics</div>
             <div className="panel">
-              <div className="h2">{s.delivered} completed · {s.pending} pending of {s.total} jobs</div>
-              {s.byStage.map((x) => (
+              <div className="h2">{summary.delivered} completed · {summary.pending} pending of {summary.total} jobs</div>
+              {summary.byStage.map((x) => (
                 <div className="bar-row" key={x.stage}>
                   <div className="bar-label">{x.stage}</div>
                   <div className="bar-track"><div className="bar-fill" style={{ width: `${(x.count / maxStage) * 100}%`, background: stageColorVar(x.stage) }} /></div>
@@ -157,28 +251,14 @@ export default function Dashboard() {
                 <Field label="Order status" full><Select value={rf.status} onChange={(v) => setRf((f) => ({ ...f, status: v }))} options={["All", ...ORDER_STATUS]} /></Field>
               </div>
               <p className="muted" style={{ marginTop: 10 }}>{reportRows.length} job{reportRows.length === 1 ? "" : "s"} match these filters.</p>
-              <Pie data={ORDER_STATUS.map((st) => ({
-                label: st,
-                count: reportRows.filter((j) => (j.order_status || "") === st).length,
-                color: stageColorVar(st),
+              <Pie data={ORDER_STATUS.map((s2) => ({
+                label: s2,
+                count: reportRows.filter((j) => (j.order_status || "") === s2).length,
+                color: stageColorVar(s2),
               }))} />
-              <button className="btn-primary" onClick={downloadExcel} disabled={reportRows.length === 0}>Download Excel report</button>
+              <button className="btn-primary" onClick={() => downloadExcel(reportRows, "NPC-Report")} disabled={reportRows.length === 0}>Download Excel report (filtered)</button>
+              <button className="btn-secondary" onClick={() => downloadExcel(jobs || [], "NPC-All-Job-Cards")} disabled={(jobs || []).length === 0}>Download ALL job cards (Excel)</button>
             </div>
-          </section>
-
-          <section className="section">
-            <div className="eyebrow">Recent jobs</div>
-            {(jobs || []).slice(0, 6).map((j) => (
-              <Link href={`/jobs/${j.job_id}`} className="list-row" key={j.job_id}>
-                <div className="row-top">
-                  <span className="job-id">{j.job_id}</span>
-                  <span className={`pill ${stagePill(j.order_status)}`}><span className="dot" />{j.order_status}</span>
-                </div>
-                <div className="row-title">{j.customer_name}</div>
-                <div className="row-sub">{[j.product_category, j.quantity && `Qty ${j.quantity}`].filter(Boolean).join(" · ")}</div>
-              </Link>
-            ))}
-            {(jobs || []).length === 0 && <div className="empty">No jobs yet.</div>}
           </section>
         </>
       )}
