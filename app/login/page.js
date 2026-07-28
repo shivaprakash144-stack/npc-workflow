@@ -41,9 +41,8 @@ export default function LoginPage() {
       <div className="login-card">
         <div className="cmyk-strip" aria-hidden="true"><span /><span /><span /><span /></div>
         <div className="login-inner">
-          <div className="login-logo">NPC</div>
-          <h1 className="login-title">Workflow manager</h1>
-          <p className="login-sub">Enquiries, job cards, design, production &amp; delivery. Staff sign-in only.</p>
+          <img src="/logo.png" alt="NPC — New Print Creations" className="login-brand" />
+          <h1 className="login-title">Workhub</h1>
 
           <div className="field">
             <label className="f-label" htmlFor="user">Username</label>
@@ -76,7 +75,7 @@ export default function LoginPage() {
           {error && <div className="alert alert-error">{error}</div>}
         </div>
       </div>
-      <p className="muted" style={{ marginTop: 18 }}>NPC Prints &amp; Gifts · Workflow manager</p>
+      <p className="muted" style={{ marginTop: 18 }}>NPC · New Print Creations</p>
     </div>
   );
 }

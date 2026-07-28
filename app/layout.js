@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "NPC Order Tracker",
-  description: "Live job and order status for NPC Prints & Gifts",
+  title: "NPC Workhub",
+  description: "NPC New Print Creations — Workhub",
 };
 
 export const viewport = {

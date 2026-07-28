@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkCredentials, createSessionToken, SESSION_COOKIE, ROLE_COOKIE } from "@/lib/auth";
+import { sql, ensureSchema } from "@/lib/db";
+import { randomUUID } from "crypto";
 
 export const dynamic = "force-dynamic";
 const attempts = new Map();
@@ -19,7 +21,15 @@ export async function POST(req) {
       attempts.set(key, recent);
       return NextResponse.json({ error: "Wrong username or password" }, { status: 401 });
     }
-    const token = await createSessionToken(found.user, found.role);
+    // One active login per user: registering this device signs out any other device
+    const jti = randomUUID();
+    try {
+      await ensureSchema();
+      const q = sql();
+      await q`INSERT INTO sessions (username, token_id, created_at) VALUES (${found.user}, ${jti}, now())
+        ON CONFLICT (username) DO UPDATE SET token_id=${jti}, created_at=now()`;
+    } catch {}
+    const token = await createSessionToken(found.user, found.role, jti);
     const res = NextResponse.json({ ok: true, user: found.user, role: found.role });
     res.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true, secure: process.env.NODE_ENV === "production",

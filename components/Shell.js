@@ -50,10 +50,10 @@ export default function Shell({ title, children, back }) {
             <Link href={back} className="btn-ghost">← Back</Link>
           ) : (
             <div className="brand">
-              <div className="brand-mark">NPC</div>
+              <img src="/logo.png" alt="NPC — New Print Creations" className="brand-logo" />
               <div>
-                <div className="brand-name">{title || "Workflow"}</div>
-                <div className="brand-sub">Prints &amp; gifts</div>
+                <div className="brand-name">{title || "Workhub"}</div>
+                <div className="brand-sub">Workhub</div>
               </div>
             </div>
           )}

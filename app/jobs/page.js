@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
-import { ORDER_STATUS } from "@/lib/options";
+import { ORDER_STATUS, DESIGNERS } from "@/lib/options";
 import { stagePill, formatStamp } from "@/lib/status";
 
 export default function JobsPage() {
@@ -15,6 +15,7 @@ export default function JobsPage() {
   const [filter, setFilter] = useState("All");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [system, setSystem] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/jobs", { cache: "no-store" });
@@ -36,6 +37,7 @@ export default function JobsPage() {
     if (filter !== "All") list = list.filter((j) => String(j.order_status || "").trim().toLowerCase() === filter.toLowerCase());
     if (from) list = list.filter((j) => (j.order_date || "").slice(0, 10) >= from);
     if (to) list = list.filter((j) => (j.order_date || "").slice(0, 10) <= to);
+    if (system) list = list.filter((j) => (j.designer_name || "") === system);
     const q = query.trim().toLowerCase();
     if (q) {
       list = list.filter(
@@ -46,7 +48,7 @@ export default function JobsPage() {
       );
     }
     return list;
-  }, [jobs, query, filter, from, to]);
+  }, [jobs, query, filter, from, to, system]);
 
   return (
     <Shell title="Jobs">
@@ -64,6 +66,12 @@ export default function JobsPage() {
           <div>
             <label className="f-label">To date</label>
             <input className="text-input" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <div className="full">
+            <label className="f-label">System (designer)</label>
+            <select value={system} onChange={(e) => setSystem(e.target.value)}>
+              {DESIGNERS.map((d) => <option key={d || "all"} value={d}>{d === "" ? "All systems" : d}</option>)}
+            </select>
           </div>
         </div>
         <div className="chip-row">

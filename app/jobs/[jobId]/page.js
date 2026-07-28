@@ -91,7 +91,6 @@ export default function JobDetailPage() {
                     href={`sms:+91${job.mobile}?body=${encodeURIComponent(`Hi ${job.customer_name}, your order ${job.job_id} (${job.product_category}) is READY at NPC Prints & Gifts. Thank you!`)}`}>Send SMS</a>
                 </div>
               )}
-              <p className="muted" style={{ marginTop: 8 }}>Status updates automatically when Design, Production, or Delivery details are saved.</p>
             </div>
             <hr className="perforation" />
             <div className="ticket-body">
@@ -138,7 +137,6 @@ export default function JobDetailPage() {
               <Field label="Designer"><Select value={job.designer_name} onChange={(v) => set("designer_name", v)} options={DESIGNERS} /></Field>
               <Field label="Design status"><Select value={job.design_status} onChange={(v) => set("design_status", v)} options={DESIGN_STATUS} /></Field>
             </div>
-            <p className="muted" style={{ marginTop: 8 }}>Approved design moves the job to Production automatically.</p>
           </section>
 
           <section className="section-card">
@@ -148,7 +146,6 @@ export default function JobDetailPage() {
               <Field label="Work type"><SelectWithOther value={job.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} placeholder="Type the work type" /></Field>
               <Field label="Production status" full><Select value={job.production_status} onChange={(v) => set("production_status", v)} options={PRODUCTION_STATUS} /></Field>
             </div>
-            <p className="muted" style={{ marginTop: 8 }}>Production “Ready” marks the job Ready for delivery automatically.</p>
             <div style={{ marginTop: 10 }}>
               {job.production_complete ? (
                 <p className="muted">
@@ -156,7 +153,7 @@ export default function JobDetailPage() {
                   <button className="btn-ghost" style={{ marginLeft: 8 }} onClick={() => { set("production_complete", false); }}>Reopen in production</button>
                 </p>
               ) : (
-                <button className="btn-ghost" onClick={() => { set("production_complete", true); }}>Mark production complete (hide from Production section)</button>
+                <button className="btn-ghost" onClick={() => { set("production_complete", true); }}>Mark production complete</button>
               )}
             </div>
           </section>
@@ -166,7 +163,6 @@ export default function JobDetailPage() {
             <div className="form-grid">
               <Field label="Delivery status" full><Select value={job.delivery_status} onChange={(v) => set("delivery_status", v)} options={DELIVERY_STATUS} /></Field>
             </div>
-            <p className="muted" style={{ marginTop: 8 }}>“Delivered” completes the job automatically.</p>
           </section>
 
           <section className="section-card">
@@ -193,11 +189,11 @@ export default function JobDetailPage() {
                     href={`https://wa.me/91${job.mobile}?text=${encodeURIComponent(`Hi ${job.customer_name}, thank you for choosing NPC Prints & Gifts! We would love your feedback — please leave us a Google review. It takes just a minute!`)}`}
                     target="_blank" rel="noopener noreferrer">Ask for review on WhatsApp</a>
                 )}
-                <p className="muted" style={{ marginTop: 8 }}>Tick the box after the customer posts the review, then Save. It is recorded in Activity with the time.</p>
               </>
             )}
           </section>
 
+          {["owner", "manager"].includes(role) && (
           <section className="section-card">
             <div className="section-title"><span className="sec-dot" style={{ background: "var(--ink-60)" }} />Activity</div>
             {(() => {
@@ -212,6 +208,7 @@ export default function JobDetailPage() {
               ));
             })()}
           </section>
+          )}
 
           <div style={{ position: "sticky", bottom: "calc(78px + env(safe-area-inset-bottom))", marginTop: 16, zIndex: 24 }}>
             <button className="btn-primary" onClick={() => save()} disabled={busy}>{busy ? "Saving…" : "Save all changes"}</button>

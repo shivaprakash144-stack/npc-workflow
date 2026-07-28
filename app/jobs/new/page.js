@@ -60,7 +60,6 @@ function NewJobForm() {
     <Shell title="New job card" back="/jobs">
       <section className="section-card" style={{ marginTop: 16 }}>
         <div className="section-title"><span className="sec-dot" style={{ background: "var(--ink)" }} />Job card {enquiryId && <span className="pill pill-cyan">from {enquiryId}</span>}</div>
-        <p className="muted" style={{ marginTop: 6 }}>Job ID is created automatically. Fields marked * are mandatory.</p>
         <div className="form-grid">
           <Field label="Customer name *" full><Text value={form.customer_name} onChange={(v) => set("customer_name", v)} placeholder="Ramesh Kumar" /></Field>
           <Field label="Mobile (10 digits) *"><Text value={form.mobile} onChange={(v) => set("mobile", v.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="9840012345" /></Field>

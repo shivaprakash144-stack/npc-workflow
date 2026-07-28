@@ -82,3 +82,13 @@ npm run dev
 - Cancel/Reactivate is owner & manager only (hidden for others and blocked on the server).
 - Job/Enquiry ID prefix now follows the Indian FINANCIAL year: J26 = Apr 1 2026 – Mar 31 2027; changes to J27 on April 1, 2027 (not Jan 1). Numbering restarts each FY.
 - Jobs panel status filter made case/space-insensitive so Cancelled jobs always appear under the Cancelled chip.
+
+## v8 changes
+
+- Official NPC (New Print Creations) logo on the login page and app header; renamed to "Workhub".
+- Helper/comment texts removed from all sections.
+- Activity history and enquiry activity visible only to owner/manager.
+- Desktop layout: wider content, wrapped filter chips (Cancelled always reachable without scrolling), floating centered dock on large screens.
+- One active login per user: signing in on a new device signs the user out everywhere else.
+- Jobs: "System (designer)" filter added. Enquiries: search bar for duplicate checking.
+- Live Google Sheet mirror (optional): every job create/update rewrites the "Jobs" tab in your sheet. Setup: create a Google Sheet with a tab named "Jobs"; create/reuse a service account with Google Sheets API enabled (see section 2 of this README's original guide); share the sheet with the service account email as **Editor**; add GOOGLE_SHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY (and optional GOOGLE_SHEET_TAB=Jobs) in Vercel; redeploy.

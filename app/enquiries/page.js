@@ -20,6 +20,13 @@ export default function EnquiriesPage() {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState("");
   const [filter, setFilter] = useState("All");
+  const [query, setQuery] = useState("");
+  const [role, setRole] = useState("staff");
+
+  useEffect(() => {
+    const m = document.cookie.match(/(?:^|;\s*)npc_role=([^;]+)/);
+    if (m) setRole(m[1]);
+  }, []);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/enquiries", { cache: "no-store" });
@@ -63,7 +70,12 @@ export default function EnquiriesPage() {
     window.scrollTo({ top: 0 });
   }
 
-  const filtered = (list || []).filter((e) => filter === "All" || e.status === filter);
+  const q = query.trim().toLowerCase();
+  const filtered = (list || []).filter((e) => {
+    if (filter !== "All" && e.status !== filter) return false;
+    if (q && !((e.customer_name || "").toLowerCase().includes(q) || (e.mobile || "").includes(q) || (e.enquiry_id || "").toLowerCase().includes(q))) return false;
+    return true;
+  });
 
   return (
     <Shell title="Enquiries">
@@ -89,7 +101,7 @@ export default function EnquiriesPage() {
             <button className="btn-secondary" onClick={() => { setShowForm(false); setEditing(null); setForm(empty); }}>Cancel</button>
             <button className="btn-primary" style={{ marginTop: 10 }} onClick={save} disabled={busy}>{busy ? "Saving…" : "Save enquiry"}</button>
           </div>
-          {editing && (() => {
+          {editing && ["owner", "manager"].includes(role) && (() => {
             let h = [];
             try { h = JSON.parse(form.history || "[]"); } catch {}
             if (!Array.isArray(h) || h.length === 0) return null;
@@ -109,6 +121,10 @@ export default function EnquiriesPage() {
       )}
 
       <section className="section">
+        <div className="search-wrap">
+          <span className="search-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg></span>
+          <input className="search-input" placeholder="Search name or mobile to check duplicates" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
         <div className="chip-row">
           {["All", ...ENQUIRY_STATUS].map((s) => (
             <button key={s} className={`chip ${filter === s ? "active" : ""}`} onClick={() => setFilter(s)}>{s}</button>

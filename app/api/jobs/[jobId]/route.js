@@ -4,6 +4,7 @@ import { sql, ensureSchema } from "@/lib/db";
 import { deriveOrderStatus, isValidMobile } from "@/lib/derive";
 import { entry, parseHistory, jobChanges } from "@/lib/history";
 import { sendOrderReadyWhatsApp, waConfigured } from "@/lib/whatsapp";
+import { syncJobsToSheet } from "@/lib/gsheet";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,7 @@ export async function PATCH(req, { params }) {
       history=${JSON.stringify(history)},
       updated_at=now()
       WHERE job_id=${params.jobId}`;
+    await syncJobsToSheet(q);
     return NextResponse.json({ ok: true, order_status: orderStatus, payment_status: payment, history });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 502 });
