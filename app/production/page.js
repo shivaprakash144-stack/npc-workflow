@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
-import { Field, Select, MultiSelect } from "@/components/Field";
+import { Field, Select, SelectWithOther } from "@/components/Field";
 import { PRODUCTION_STATUS, WORK_TYPES, MACHINE_TYPES } from "@/lib/options";
 import { stagePill, formatStamp } from "@/lib/status";
 
@@ -145,8 +145,8 @@ export default function ProductionPage() {
 
               {open === j.job_id ? (
                 <div className="form-grid" style={{ marginTop: 12 }}>
-                  <Field label="Machine type (select one or more)"><MultiSelect value={edit.machine_type} onChange={(v) => setEdit((e) => ({ ...e, machine_type: v }))} options={MACHINE_TYPES} placeholder="Tap to select machines" /></Field>
-                  <Field label="Work type (select one or more)"><MultiSelect value={edit.work_type} onChange={(v) => setEdit((e) => ({ ...e, work_type: v }))} options={WORK_TYPES} placeholder="Tap to select work types" /></Field>
+                  <Field label="Machine type"><SelectWithOther value={edit.machine_type} onChange={(v) => setEdit((e) => ({ ...e, machine_type: v }))} options={MACHINE_TYPES} placeholder="Type the machine details" /></Field>
+                  <Field label="Work type"><SelectWithOther value={edit.work_type} onChange={(v) => setEdit((e) => ({ ...e, work_type: v }))} options={WORK_TYPES} placeholder="Type the work type" /></Field>
                   <Field label="Production status" full><Select value={edit.production_status} onChange={(v) => setEdit((e) => ({ ...e, production_status: v }))} options={PRODUCTION_STATUS} /></Field>
                   <div className="btn-row full">
                     <button className="btn-secondary" onClick={() => setOpen(null)}>Cancel</button>

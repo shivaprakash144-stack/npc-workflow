@@ -101,26 +101,47 @@ export function SelectWithOther({ value, onChange, options, placeholder = "Type 
   );
 }
 
-// Checkbox multi-select: lets one customer order multiple products / work types.
+// Checkbox multi-select: lets one customer order multiple products.
 // Stores the selection as a comma-separated string ("Visiting Cards, Mug Printing").
-export function MultiSelect({ value, onChange, options, placeholder = "Tap to select", allowOther = true }) {
-  const [open, setOpen] = React.useState(false);
-  const [other, setOther] = React.useState("");
-  const opts = options.filter((o) => o && o !== "Other");
+// Ticking "Other" opens a comment box, same as the single dropdowns.
+export function MultiSelect({ value, onChange, options, placeholder = "Tap to select" }) {
+  const OTHER = "Other";
+  const opts = options.filter((o) => o && o !== OTHER);
   const selected = String(value || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const customs = selected.filter((s) => !opts.includes(s));
+  const standard = selected.filter((s) => opts.includes(s));
+
+  const [open, setOpen] = React.useState(false);
+  const [otherOn, setOtherOn] = React.useState(customs.length > 0);
+  const [otherText, setOtherText] = React.useState(customs.join(", "));
+
+  React.useEffect(() => {
+    if (customs.length > 0) {
+      setOtherOn(true);
+      setOtherText(customs.join(", "));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  function emit(nextStandard, nextOtherText, nextOtherOn) {
+    const parts = [...nextStandard];
+    const t = String(nextOtherText || "").trim();
+    if (nextOtherOn && t) parts.push(t);
+    onChange(parts.join(", "));
+  }
 
   function toggle(o) {
-    const next = selected.includes(o) ? selected.filter((x) => x !== o) : [...selected, o];
-    onChange(next.join(", "));
+    const next = standard.includes(o) ? standard.filter((x) => x !== o) : [...standard, o];
+    emit(next, otherText, otherOn);
   }
-  function removeItem(o) {
-    onChange(selected.filter((x) => x !== o).join(", "));
-  }
-  function addOther() {
-    const t = other.trim();
-    if (!t) return;
-    if (!selected.includes(t)) onChange([...selected, t].join(", "));
-    setOther("");
+
+  function toggleOther() {
+    const next = !otherOn;
+    setOtherOn(next);
+    if (!next) {
+      setOtherText("");
+      emit(standard, "", false);
+    }
   }
 
   return (
@@ -134,15 +155,7 @@ export function MultiSelect({ value, onChange, options, placeholder = "Tap to se
       >
         {selected.length === 0 && <span style={{ opacity: 0.55 }}>{placeholder}</span>}
         {selected.map((s) => (
-          <span key={s} className="pill pill-gray" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            {s}
-            <span
-              role="button"
-              aria-label={`Remove ${s}`}
-              onClick={(e) => { e.stopPropagation(); removeItem(s); }}
-              style={{ cursor: "pointer", fontWeight: 800 }}
-            >×</span>
-          </span>
+          <span key={s} className="pill pill-gray">{s}</span>
         ))}
         <span style={{ marginLeft: "auto", opacity: 0.6 }}>{open ? "▲" : "▼"}</span>
       </div>
@@ -152,7 +165,7 @@ export function MultiSelect({ value, onChange, options, placeholder = "Tap to se
           style={{
             position: "absolute", zIndex: 40, left: 0, right: 0, marginTop: 6,
             background: "#fff", border: "1px solid var(--line)", borderRadius: 12,
-            boxShadow: "0 10px 30px rgba(0,0,0,.12)", padding: 10, maxHeight: 260, overflowY: "auto",
+            boxShadow: "0 10px 30px rgba(0,0,0,.12)", padding: 10, maxHeight: 280, overflowY: "auto",
           }}
         >
           {opts.map((o) => (
@@ -160,23 +173,29 @@ export function MultiSelect({ value, onChange, options, placeholder = "Tap to se
               <input
                 type="checkbox"
                 style={{ width: 18, height: 18, accentColor: "var(--ink)" }}
-                checked={selected.includes(o)}
+                checked={standard.includes(o)}
                 onChange={() => toggle(o)}
               />
               {o}
             </label>
           ))}
-          {allowOther && (
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <input
-                className="text-input"
-                placeholder="Other — type and add"
-                value={other}
-                onChange={(e) => setOther(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addOther(); } }}
-              />
-              <button type="button" className="btn-ghost" onClick={addOther}>Add</button>
-            </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 4px", cursor: "pointer", fontSize: 14 }}>
+            <input
+              type="checkbox"
+              style={{ width: 18, height: 18, accentColor: "var(--ink)" }}
+              checked={otherOn}
+              onChange={toggleOther}
+            />
+            {OTHER}
+          </label>
+          {otherOn && (
+            <input
+              className="text-input"
+              style={{ marginTop: 6 }}
+              placeholder="Type the details"
+              value={otherText}
+              onChange={(e) => { setOtherText(e.target.value); emit(standard, e.target.value, true); }}
+            />
           )}
           <div style={{ textAlign: "right", marginTop: 8 }}>
             <button type="button" className="btn-ghost" onClick={() => setOpen(false)}>Done</button>

@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Shell from "@/components/Shell";
-import { Field, Select, Text, MultiSelect } from "@/components/Field";
+import { Field, Select, Text, MultiSelect, SelectWithOther } from "@/components/Field";
 import { PRODUCT_TYPES, PRIORITY, WORK_TYPES, PAYMENT, DESIGNERS, YES_NO } from "@/lib/options";
 
 function NewJobForm() {
@@ -77,7 +77,7 @@ function NewJobForm() {
           <Field label="Mobile (10 digits) *"><Text value={form.mobile} onChange={(v) => set("mobile", v.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="9840012345" /></Field>
           <Field label="Quantity *"><Text value={form.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" /></Field>
           <Field label="Product category * (select one or more)" full><MultiSelect value={form.product_category} onChange={(v) => set("product_category", v)} options={PRODUCT_TYPES} placeholder="Tap to select products" /></Field>
-          <Field label="Work type (select one or more)" full><MultiSelect value={form.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} placeholder="Tap to select work types" /></Field>
+          <Field label="Work type"><SelectWithOther value={form.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} placeholder="Type the work type" /></Field>
           <Field label="Design required"><Select value={form.design_required} onChange={(v) => set("design_required", v)} options={YES_NO} /></Field>
           <Field label="System (designer)"><Select value={form.designer_name} onChange={(v) => set("designer_name", v)} options={DESIGNERS} /></Field>
           <Field label="Payment status"><Select value={form.payment_status} onChange={(v) => set("payment_status", v)} options={PAYMENT} /></Field>

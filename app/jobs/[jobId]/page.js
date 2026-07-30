@@ -169,8 +169,8 @@ export default function JobDetailPage() {
           <section className="section-card">
             <div className="section-title"><span className="sec-dot" style={{ background: "var(--cyan)" }} />Production department</div>
             <div className="form-grid">
-              <Field label="Machine type (select one or more)"><MultiSelect value={job.machine_type} onChange={(v) => set("machine_type", v)} options={MACHINE_TYPES} placeholder="Tap to select machines" /></Field>
-              <Field label="Work type (select one or more)"><MultiSelect value={job.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} placeholder="Tap to select work types" /></Field>
+              <Field label="Machine type"><SelectWithOther value={job.machine_type} onChange={(v) => set("machine_type", v)} options={MACHINE_TYPES} placeholder="Type the machine details" /></Field>
+              <Field label="Work type"><SelectWithOther value={job.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} placeholder="Type the work type" /></Field>
               <Field label="Production status" full><Select value={job.production_status} onChange={(v) => set("production_status", v)} options={PRODUCTION_STATUS} /></Field>
             </div>
             <div style={{ marginTop: 10 }}>
