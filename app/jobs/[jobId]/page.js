@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
-import { Field, Select, Text, SelectWithOther } from "@/components/Field";
+import { Field, Select, Text, SelectWithOther, MultiSelect } from "@/components/Field";
 import {
   DESIGN_STATUS, DESIGNERS, PRODUCTION_STATUS, DELIVERY_STATUS,
-  WORK_TYPES, MACHINE_TYPES, PRODUCT_TYPES, PRIORITY, PAYMENT,
+  WORK_TYPES, MACHINE_TYPES, PRODUCT_TYPES, PRIORITY, PAYMENT, YES_NO,
 } from "@/lib/options";
 import { STAGES, stagePill, stageIndex, formatStamp } from "@/lib/status";
 
@@ -59,8 +59,16 @@ export default function JobDetailPage() {
     setTimeout(() => setToast(""), 2500);
   }
 
-  const currentIdx = job ? stageIndex(job.order_status) : -1;
   const cancelled = job && job.order_status === "Cancelled";
+  // Progress stages include Review as the final step (after Ready → Delivered)
+  const timelineStages = [...STAGES, "Review"];
+  const reviewDone = !!(job && job.review_done);
+  const delivered = job && job.order_status === "Delivered";
+  const currentIdx = !job || cancelled
+    ? -1
+    : delivered
+      ? (reviewDone ? timelineStages.length : timelineStages.indexOf("Review"))
+      : stageIndex(job.order_status);
 
   return (
     <Shell title={String(jobId)} back="/jobs">
@@ -99,17 +107,35 @@ export default function JobDetailPage() {
                 <div className="alert alert-error" style={{ marginTop: 10 }}>This job was cancelled.</div>
               ) : (
                 <div className="timeline">
-                  {STAGES.map((stage, i) => {
+                  {timelineStages.map((stage, i) => {
                     const state = i < currentIdx ? "done" : i === currentIdx ? "current" : "upcoming";
+                    const isReview = stage === "Review";
                     return (
                       <div className={`stage ${state}`} key={stage}>
                         <div className="stage-rail">
                           <div className="stage-dot">
                             {state === "done" && (<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 13 4 4L19 7" /></svg>)}
                           </div>
-                          {i < STAGES.length - 1 && <div className="stage-line" />}
+                          {i < timelineStages.length - 1 && <div className="stage-line" />}
                         </div>
-                        <div><div className="stage-title">{stage}</div></div>
+                        <div>
+                          <div className="stage-title">{isReview ? "Google Review" : stage}</div>
+                          {isReview && delivered && (
+                            <div style={{ marginTop: 6 }}>
+                              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
+                                <input type="checkbox" style={{ width: 18, height: 18, accentColor: "#1f9d55" }}
+                                  checked={reviewDone}
+                                  onChange={(e) => set("review_done", e.target.checked)} />
+                                Google review completed
+                              </label>
+                              {/^\d{10}$/.test(String(job.mobile || "")) && !reviewDone && (
+                                <a className="btn-ghost" style={{ display: "inline-block", marginTop: 8, background: "#e7f8ee", borderColor: "#1f9d55", color: "#146c3a", fontWeight: 700 }}
+                                  href={`https://wa.me/91${job.mobile}?text=${encodeURIComponent(`Hi ${job.customer_name}, thank you for choosing NPC Prints & Gifts! We would love your feedback — please leave us a Google review. It takes just a minute!`)}`}
+                                  target="_blank" rel="noopener noreferrer">Ask for review on WhatsApp</a>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -123,8 +149,9 @@ export default function JobDetailPage() {
             <div className="form-grid">
               <Field label="Customer name *"><Text value={job.customer_name} onChange={(v) => set("customer_name", v)} /></Field>
               <Field label="Mobile (10 digits) *"><Text value={job.mobile} onChange={(v) => set("mobile", v.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" /></Field>
-              <Field label="Product category"><SelectWithOther value={job.product_category} onChange={(v) => set("product_category", v)} options={PRODUCT_TYPES} placeholder="Type the product details" /></Field>
+              <Field label="Product category (select one or more)" full><MultiSelect value={job.product_category} onChange={(v) => set("product_category", v)} options={PRODUCT_TYPES} placeholder="Tap to select products" /></Field>
               <Field label="Quantity"><Text value={job.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" /></Field>
+              <Field label="Design required"><Select value={job.design_required || "No"} onChange={(v) => set("design_required", v)} options={YES_NO} /></Field>
               <Field label="Delivery date"><input className="text-input" type="date" value={job.delivery_date || ""} onChange={(e) => set("delivery_date", e.target.value)} /></Field>
               <Field label="Priority"><Select value={job.priority} onChange={(v) => set("priority", v)} options={PRIORITY} /></Field>
               <Field label="Notes" full><textarea rows={2} value={job.notes || ""} onChange={(e) => set("notes", e.target.value)} /></Field>
@@ -134,7 +161,7 @@ export default function JobDetailPage() {
           <section className="section-card">
             <div className="section-title"><span className="sec-dot" style={{ background: "var(--magenta)" }} />Design department</div>
             <div className="form-grid">
-              <Field label="Designer"><Select value={job.designer_name} onChange={(v) => set("designer_name", v)} options={DESIGNERS} /></Field>
+              <Field label="Designer (system)"><Select value={job.designer_name} onChange={(v) => set("designer_name", v)} options={DESIGNERS} /></Field>
               <Field label="Design status"><Select value={job.design_status} onChange={(v) => set("design_status", v)} options={DESIGN_STATUS} /></Field>
             </div>
           </section>
@@ -142,8 +169,8 @@ export default function JobDetailPage() {
           <section className="section-card">
             <div className="section-title"><span className="sec-dot" style={{ background: "var(--cyan)" }} />Production department</div>
             <div className="form-grid">
-              <Field label="Machine type"><Select value={job.machine_type} onChange={(v) => set("machine_type", v)} options={MACHINE_TYPES} /></Field>
-              <Field label="Work type"><SelectWithOther value={job.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} placeholder="Type the work type" /></Field>
+              <Field label="Machine type (select one or more)"><MultiSelect value={job.machine_type} onChange={(v) => set("machine_type", v)} options={MACHINE_TYPES} placeholder="Tap to select machines" /></Field>
+              <Field label="Work type (select one or more)"><MultiSelect value={job.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} placeholder="Tap to select work types" /></Field>
               <Field label="Production status" full><Select value={job.production_status} onChange={(v) => set("production_status", v)} options={PRODUCTION_STATUS} /></Field>
             </div>
             <div style={{ marginTop: 10 }}>
@@ -159,7 +186,7 @@ export default function JobDetailPage() {
           </section>
 
           <section className="section-card">
-            <div className="section-title"><span className="sec-dot" style={{ background: "var(--yellow)" }} />Delivery / dispatch</div>
+            <div className="section-title"><span className="sec-dot" style={{ background: "var(--yellow)" }} />Delivery</div>
             <div className="form-grid">
               <Field label="Delivery status" full><Select value={job.delivery_status} onChange={(v) => set("delivery_status", v)} options={DELIVERY_STATUS} /></Field>
             </div>
@@ -170,27 +197,6 @@ export default function JobDetailPage() {
             <div className="form-grid">
               <Field label="Payment received" full><Select value={job.payment_status} onChange={(v) => set("payment_status", v)} options={PAYMENT} /></Field>
             </div>
-          </section>
-
-          <section className="section-card">
-            <div className="section-title"><span className="sec-dot" style={{ background: "#1f9d55" }} />Google review (after delivery)</div>
-            {job.order_status !== "Delivered" && !job.review_done ? (
-              <p className="muted" style={{ marginTop: 8 }}>Follow up for a Google review once the job is Delivered.</p>
-            ) : (
-              <>
-                <label style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, cursor: "pointer", fontWeight: 600 }}>
-                  <input type="checkbox" style={{ width: 20, height: 20, accentColor: "#1f9d55" }}
-                    checked={!!job.review_done}
-                    onChange={(e) => set("review_done", e.target.checked)} />
-                  Google review completed
-                </label>
-                {/^\d{10}$/.test(String(job.mobile || "")) && !job.review_done && (
-                  <a className="btn-ghost" style={{ display: "inline-block", marginTop: 12, background: "#e7f8ee", borderColor: "#1f9d55", color: "#146c3a", fontWeight: 700 }}
-                    href={`https://wa.me/91${job.mobile}?text=${encodeURIComponent(`Hi ${job.customer_name}, thank you for choosing NPC Prints & Gifts! We would love your feedback — please leave us a Google review. It takes just a minute!`)}`}
-                    target="_blank" rel="noopener noreferrer">Ask for review on WhatsApp</a>
-                )}
-              </>
-            )}
           </section>
 
           {["owner", "manager"].includes(role) && (
@@ -219,7 +225,7 @@ export default function JobDetailPage() {
               {cancelled ? (
                 <button className="btn-secondary" onClick={() => { set("order_status", ""); save({ cancelled: false }); }} disabled={busy}>Reactivate job</button>
               ) : (
-                <button className="btn-secondary btn-danger-ghost" onClick={() => { set("order_status", "Cancelled"); save({ cancelled: true }); }} disabled={busy}>Cancel this job (owner/manager)</button>
+                <button className="btn-secondary btn-danger-ghost" onClick={() => { set("order_status", "Cancelled"); save({ cancelled: true }); }} disabled={busy}>Cancel this job</button>
               )}
             </div>
           )}

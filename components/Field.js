@@ -100,3 +100,89 @@ export function SelectWithOther({ value, onChange, options, placeholder = "Type 
     </div>
   );
 }
+
+// Checkbox multi-select: lets one customer order multiple products / work types.
+// Stores the selection as a comma-separated string ("Visiting Cards, Mug Printing").
+export function MultiSelect({ value, onChange, options, placeholder = "Tap to select", allowOther = true }) {
+  const [open, setOpen] = React.useState(false);
+  const [other, setOther] = React.useState("");
+  const opts = options.filter((o) => o && o !== "Other");
+  const selected = String(value || "").split(",").map((s) => s.trim()).filter(Boolean);
+
+  function toggle(o) {
+    const next = selected.includes(o) ? selected.filter((x) => x !== o) : [...selected, o];
+    onChange(next.join(", "));
+  }
+  function removeItem(o) {
+    onChange(selected.filter((x) => x !== o).join(", "));
+  }
+  function addOther() {
+    const t = other.trim();
+    if (!t) return;
+    if (!selected.includes(t)) onChange([...selected, t].join(", "));
+    setOther("");
+  }
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div
+        className="text-input"
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((v) => !v)}
+        style={{ cursor: "pointer", minHeight: 42, display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}
+      >
+        {selected.length === 0 && <span style={{ opacity: 0.55 }}>{placeholder}</span>}
+        {selected.map((s) => (
+          <span key={s} className="pill pill-gray" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            {s}
+            <span
+              role="button"
+              aria-label={`Remove ${s}`}
+              onClick={(e) => { e.stopPropagation(); removeItem(s); }}
+              style={{ cursor: "pointer", fontWeight: 800 }}
+            >×</span>
+          </span>
+        ))}
+        <span style={{ marginLeft: "auto", opacity: 0.6 }}>{open ? "▲" : "▼"}</span>
+      </div>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute", zIndex: 40, left: 0, right: 0, marginTop: 6,
+            background: "#fff", border: "1px solid var(--line)", borderRadius: 12,
+            boxShadow: "0 10px 30px rgba(0,0,0,.12)", padding: 10, maxHeight: 260, overflowY: "auto",
+          }}
+        >
+          {opts.map((o) => (
+            <label key={o} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 4px", cursor: "pointer", fontSize: 14 }}>
+              <input
+                type="checkbox"
+                style={{ width: 18, height: 18, accentColor: "var(--ink)" }}
+                checked={selected.includes(o)}
+                onChange={() => toggle(o)}
+              />
+              {o}
+            </label>
+          ))}
+          {allowOther && (
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <input
+                className="text-input"
+                placeholder="Other — type and add"
+                value={other}
+                onChange={(e) => setOther(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addOther(); } }}
+              />
+              <button type="button" className="btn-ghost" onClick={addOther}>Add</button>
+            </div>
+          )}
+          <div style={{ textAlign: "right", marginTop: 8 }}>
+            <button type="button" className="btn-ghost" onClick={() => setOpen(false)}>Done</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

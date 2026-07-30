@@ -38,20 +38,21 @@ export async function PATCH(req, { params }) {
     if (!rows.length) return NextResponse.json({ error: "Job not found" }, { status: 404 });
     const oldJ = rows[0];
 
-    // Cancel / reactivate: owner and manager only
+    // Cancel / reactivate: admin and manager only
     const wasCancelled = oldJ.order_status === "Cancelled";
     const wantCancelled = !!b.cancelled;
     if (wantCancelled !== wasCancelled && !["owner", "manager"].includes(s.role)) {
-      return NextResponse.json({ error: "Only the owner or manager can cancel or reactivate a job" }, { status: 403 });
+      return NextResponse.json({ error: "Only the admin or manager can cancel or reactivate a job" }, { status: 403 });
     }
 
     const payment = b.payment_status === "Yes" ? "Yes" : "No";
     const orderStatus = wantCancelled ? "Cancelled" : deriveOrderStatus(b);
     const reviewDone = typeof b.review_done === "boolean" ? b.review_done : !!oldJ.review_done;
     const prodComplete = typeof b.production_complete === "boolean" ? b.production_complete : !!oldJ.production_complete;
+    const designRequired = b.design_required === "Yes" ? "Yes" : "No";
 
     const history = parseHistory(oldJ.history);
-    const changes = jobChanges(oldJ, { ...b, payment_status: payment }, orderStatus);
+    const changes = jobChanges(oldJ, { ...b, payment_status: payment, design_required: designRequired }, orderStatus);
     for (const c of changes) history.push(entry(s.user, c));
     if (b.cancelled && oldJ.order_status !== "Cancelled") history.push(entry(s.user, "Job cancelled"));
     if (!b.cancelled && oldJ.order_status === "Cancelled") history.push(entry(s.user, "Job reactivated"));
@@ -79,6 +80,7 @@ export async function PATCH(req, { params }) {
       delivery_date=${b.delivery_date || null}, priority=${b.priority || "Normal"},
       order_status=${orderStatus},
       designer_name=${b.designer_name || ""}, design_status=${b.design_status || ""},
+      design_required=${designRequired},
       machine_type=${b.machine_type || ""}, work_type=${b.work_type || ""}, production_status=${b.production_status || ""},
       delivery_status=${b.delivery_status || ""},
       production_complete=${prodComplete},

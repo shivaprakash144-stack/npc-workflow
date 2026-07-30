@@ -14,6 +14,7 @@ const st = (v) => (v || "").toLowerCase();
 
 const DRILLS = {
   today: { label: "Today's orders", accent: "var(--ink)", fn: (j) => (j.order_date || "").slice(0, 10) === today() },
+  todayDelivery: { label: "Today's deliveries", accent: "var(--yellow)", fn: (j) => j.delivery_date && String(j.delivery_date).slice(0, 10) === today() && !["delivered", "cancelled"].includes(st(j.order_status)) },
   designPending: { label: "Design pending", accent: "var(--magenta)", fn: (j) => ["design pending", "design approval"].includes(st(j.order_status)) },
   production: { label: "Production pending", accent: "var(--cyan)", fn: (j) => st(j.order_status) === "production" },
   ready: { label: "Ready for delivery", accent: "var(--yellow)", fn: (j) => st(j.order_status) === "ready" },
@@ -99,8 +100,8 @@ export default function Dashboard() {
     let list = jobs || [];
     if (rf.from) list = list.filter((j) => (j.order_date || "").slice(0, 10) >= rf.from);
     if (rf.to) list = list.filter((j) => (j.order_date || "").slice(0, 10) <= rf.to);
-    if (rf.machine) list = list.filter((j) => (j.machine_type || "") === rf.machine);
-    if (rf.work) list = list.filter((j) => (j.work_type || "") === rf.work);
+    if (rf.machine) list = list.filter((j) => (j.machine_type || "").includes(rf.machine));
+    if (rf.work) list = list.filter((j) => (j.work_type || "").includes(rf.work));
     if (rf.status !== "All") list = list.filter((j) => (j.order_status || "") === rf.status);
     return list;
   }, [jobs, rf]);
@@ -116,6 +117,7 @@ export default function Dashboard() {
       "Work Type": j.work_type,
       "Machine Type": j.machine_type,
       "Designer": j.designer_name,
+      "Design Required": j.design_required || "No",
       "Design Status": j.design_status,
       "Production Status": j.production_status,
       "Delivery Status": j.delivery_status,

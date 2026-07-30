@@ -15,9 +15,10 @@ export async function GET() {
   try {
     await ensureSchema();
     const q = sql();
-    const jobs = await q`SELECT job_id, customer_name, product_category, quantity, delivery_date, priority, order_status, design_status, machine_type, work_type, production_status, notes, created_at, updated_at
+    // Completed jobs are included so the page can show a "Completed" list; the client filters.
+    const jobs = await q`SELECT job_id, customer_name, mobile, product_category, quantity, delivery_date, priority, order_status, design_status, machine_type, work_type, production_status, production_complete, notes, created_at, updated_at
       FROM jobs
-      WHERE order_status <> 'Cancelled' AND COALESCE(production_complete, false) = false
+      WHERE order_status <> 'Cancelled'
       ORDER BY created_at DESC`;
     return NextResponse.json({ jobs });
   } catch (e) {
