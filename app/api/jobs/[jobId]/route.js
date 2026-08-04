@@ -51,6 +51,13 @@ export async function PATCH(req, { params }) {
     const prodComplete = typeof b.production_complete === "boolean" ? b.production_complete : !!oldJ.production_complete;
     const designRequired = b.design_required === "Yes" ? "Yes" : "No";
 
+    // Delivery date can only be changed by admin or manager
+    const oldDate = oldJ.delivery_date ? String(oldJ.delivery_date).slice(0, 10) : "";
+    const newDate = b.delivery_date ? String(b.delivery_date).slice(0, 10) : "";
+    if (oldDate !== newDate && !["owner", "manager"].includes(s.role)) {
+      return NextResponse.json({ error: "Only the admin or manager can change the delivery date" }, { status: 403 });
+    }
+
     const history = parseHistory(oldJ.history);
     const changes = jobChanges(oldJ, { ...b, payment_status: payment, design_required: designRequired }, orderStatus);
     for (const c of changes) history.push(entry(s.user, c));
@@ -61,6 +68,9 @@ export async function PATCH(req, { params }) {
     }
     if (reviewDone !== !!oldJ.review_done) {
       history.push(entry(s.user, reviewDone ? "Google review completed ✓" : "Google review unmarked"));
+    }
+    if (oldDate !== newDate) {
+      history.push(entry(s.user, `Delivery date: ${oldDate || "—"} → ${newDate || "—"}`));
     }
 
     // Auto WhatsApp when the job just became Ready
@@ -82,6 +92,7 @@ export async function PATCH(req, { params }) {
       designer_name=${b.designer_name || ""}, design_status=${b.design_status || ""},
       design_required=${designRequired},
       machine_type=${b.machine_type || ""}, work_type=${b.work_type || ""}, production_status=${b.production_status || ""},
+      production_unit=${b.production_unit || ""},
       delivery_status=${b.delivery_status || ""},
       production_complete=${prodComplete},
       review_done=${reviewDone},

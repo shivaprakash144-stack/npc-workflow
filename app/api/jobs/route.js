@@ -14,7 +14,7 @@ export async function GET() {
   try {
     await ensureSchema();
     const q = sql();
-    const jobs = await q`SELECT job_id, enquiry_id, customer_name, mobile, product_category, quantity, payment_status, order_date, delivery_date, priority, order_status, design_status, designer_name, design_required, machine_type, production_status, delivery_status, work_type, production_complete, review_done, notes, created_at, updated_at FROM jobs ORDER BY created_at DESC`;
+    const jobs = await q`SELECT job_id, enquiry_id, customer_name, mobile, product_category, quantity, payment_status, order_date, delivery_date, priority, order_status, design_status, designer_name, design_required, production_unit, machine_type, production_status, delivery_status, work_type, production_complete, review_done, notes, created_at, updated_at FROM jobs ORDER BY created_at DESC`;
     return NextResponse.json({ jobs, syncedAt: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 502 });
@@ -40,8 +40,8 @@ export async function POST(req) {
     for (let attempt = 0; attempt < 3; attempt++) {
       const id = await nextJobId(q);
       try {
-        await q`INSERT INTO jobs (job_id, enquiry_id, customer_name, mobile, product_category, quantity, payment_status, delivery_date, priority, order_status, work_type, designer_name, design_required, notes, history, production_complete)
-          VALUES (${id}, ${b.enquiry_id || ""}, ${b.customer_name.trim()}, ${String(b.mobile).trim()}, ${String(b.product_category).trim()}, ${b.quantity}, ${payment}, ${b.delivery_date}, ${b.priority || "Normal"}, 'Design Pending', ${b.work_type || ""}, ${b.designer_name || ""}, ${b.design_required || "No"}, ${b.notes || ""}, ${history}, false)`;
+        await q`INSERT INTO jobs (job_id, enquiry_id, customer_name, mobile, product_category, quantity, payment_status, delivery_date, priority, order_status, work_type, designer_name, design_required, production_unit, notes, history, production_complete)
+          VALUES (${id}, ${b.enquiry_id || ""}, ${b.customer_name.trim()}, ${String(b.mobile).trim()}, ${String(b.product_category).trim()}, ${b.quantity}, ${payment}, ${b.delivery_date}, ${b.priority || "Normal"}, 'Design Pending', ${b.work_type || ""}, ${b.designer_name || ""}, ${b.design_required || "No"}, ${b.production_unit || ""}, ${b.notes || ""}, ${history}, false)`;
         if (b.enquiry_id) await q`UPDATE enquiries SET status='Confirmed' WHERE enquiry_id=${b.enquiry_id}`;
         await syncJobsToSheet(q);
         return NextResponse.json({ ok: true, job_id: id });

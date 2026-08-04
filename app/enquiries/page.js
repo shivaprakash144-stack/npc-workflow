@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
-import { Field, Select, Text, FileUpload, MultiSelect } from "@/components/Field";
+import { Field, Select, Text, FileUpload, MultiSelect, SelectWithOther } from "@/components/Field";
 import { ENQUIRY_STATUS, PRODUCT_TYPES, YES_NO, DESIGNERS, PRIORITY, ENQUIRY_MODE } from "@/lib/options";
 import { formatStamp } from "@/lib/status";
 
-const PER_PAGE = 30;
+const PER_PAGE = 50;
+const daysAgo = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 
 const empty = {
   customer_name: "", mobile: "", product_type: "", size_material: "", quantity: "",
@@ -28,6 +29,7 @@ export default function EnquiriesPage() {
   const [filter, setFilter] = useState("All");
   const [query, setQuery] = useState("");
   const [system, setSystem] = useState("");
+  const [prio, setPrio] = useState("All");
   const [page, setPage] = useState(1);
   const [role, setRole] = useState("staff");
 
@@ -82,7 +84,10 @@ export default function EnquiriesPage() {
   // Base list: search + system filter applied (chip counts computed on this)
   const baseList = useMemo(() => {
     let l = list || [];
+    // Default view: last 30 days of enquiries
+    l = l.filter((e) => String(e.created_at || "").slice(0, 10) >= daysAgo(30));
     if (system) l = l.filter((e) => (e.designer_name || "") === system);
+    if (prio !== "All") l = l.filter((e) => (e.priority || "Normal") === prio);
     if (q) {
       l = l.filter((e) =>
         (e.customer_name || "").toLowerCase().includes(q) ||
@@ -91,7 +96,7 @@ export default function EnquiriesPage() {
       );
     }
     return l;
-  }, [list, q, system]);
+  }, [list, q, system, prio]);
 
   const counts = useMemo(() => {
     const c = { All: baseList.length };
@@ -105,7 +110,7 @@ export default function EnquiriesPage() {
   }, [baseList, filter]);
 
   // Pagination: 30 per page
-  useEffect(() => { setPage(1); }, [query, filter, system]);
+  useEffect(() => { setPage(1); }, [query, filter, system, prio]);
   const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
@@ -120,7 +125,7 @@ export default function EnquiriesPage() {
           <div className="form-grid">
             <Field label="Customer name *" full><Text value={form.customer_name} onChange={(v) => set("customer_name", v)} placeholder="Ramesh Kumar" /></Field>
             <Field label="Mobile (10 digits) *"><Text value={form.mobile} onChange={(v) => set("mobile", v.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="9840012345" /></Field>
-            <Field label="Enquiry mode"><Select value={form.enquiry_mode} onChange={(v) => set("enquiry_mode", v)} options={ENQUIRY_MODE} /></Field>
+            <Field label="Enquiry mode"><SelectWithOther value={form.enquiry_mode} onChange={(v) => set("enquiry_mode", v)} options={ENQUIRY_MODE} placeholder="Type the enquiry mode" /></Field>
             <Field label="Product type (select one or more)" full><MultiSelect value={form.product_type} onChange={(v) => set("product_type", v)} options={PRODUCT_TYPES} placeholder="Tap to select products" /></Field>
             <Field label="Size / material"><Text value={form.size_material} onChange={(v) => set("size_material", v)} placeholder="10x6 ft flex" /></Field>
             <Field label="Quantity"><Text value={form.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" placeholder="100" /></Field>
@@ -171,6 +176,14 @@ export default function EnquiriesPage() {
         <div className="chip-row">
           {["All", ...ENQUIRY_STATUS].map((s) => (
             <button key={s} className={`chip ${filter === s ? "active" : ""}`} onClick={() => setFilter(s)}>{s} ({counts[s] ?? 0})</button>
+          ))}
+        </div>
+        <div className="eyebrow" style={{ marginTop: 10 }}>Priority</div>
+        <div className="chip-row">
+          {["All", "Urgent", "Normal"].map((p) => (
+            <button key={p} className={`chip ${prio === p ? "active" : ""}`} onClick={() => setPrio(p)}>
+              {p} ({p === "All" ? baseList.length : baseList.filter((e) => (e.priority || "Normal") === p).length})
+            </button>
           ))}
         </div>
         {!list && <div className="spinner" />}

@@ -106,12 +106,13 @@ export function SelectWithOther({ value, onChange, options, placeholder = "Type 
 // Ticking "Other" opens a comment box, same as the single dropdowns.
 export function MultiSelect({ value, onChange, options, placeholder = "Tap to select" }) {
   const OTHER = "Other";
-  const opts = options.filter((o) => o && o !== OTHER);
+  const opts = options.filter((o) => o && o !== OTHER).slice().sort((a, b) => a.localeCompare(b));
   const selected = String(value || "").split(",").map((s) => s.trim()).filter(Boolean);
   const customs = selected.filter((s) => !opts.includes(s));
   const standard = selected.filter((s) => opts.includes(s));
 
   const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
   const [otherOn, setOtherOn] = React.useState(customs.length > 0);
   const [otherText, setOtherText] = React.useState(customs.join(", "));
 
@@ -168,7 +169,26 @@ export function MultiSelect({ value, onChange, options, placeholder = "Tap to se
             boxShadow: "0 10px 30px rgba(0,0,0,.12)", padding: 10, maxHeight: 280, overflowY: "auto",
           }}
         >
-          {opts.map((o) => (
+          <input
+            className="text-input"
+            style={{ marginBottom: 6 }}
+            placeholder="Type to search…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {opts
+            .filter((o) => {
+              const q = search.trim().toLowerCase();
+              return !q || o.toLowerCase().includes(q);
+            })
+            .sort((a, b) => {
+              const q = search.trim().toLowerCase();
+              if (!q) return 0;
+              const as = a.toLowerCase().startsWith(q) ? 0 : 1;
+              const bs = b.toLowerCase().startsWith(q) ? 0 : 1;
+              return as - bs;
+            })
+            .map((o) => (
             <label key={o} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 4px", cursor: "pointer", fontSize: 14 }}>
               <input
                 type="checkbox"

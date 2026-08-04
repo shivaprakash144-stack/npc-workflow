@@ -32,6 +32,7 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [drill, setDrill] = useState(null);
   const [rf, setRf] = useState({ from: "", to: "", machine: "", work: "", status: "All" });
+  const [rPage, setRPage] = useState(1);
 
   const load = useCallback(async () => {
     try {
@@ -105,6 +106,11 @@ export default function Dashboard() {
     if (rf.status !== "All") list = list.filter((j) => (j.order_status || "") === rf.status);
     return list;
   }, [jobs, rf]);
+
+  useEffect(() => { setRPage(1); }, [rf]);
+  const R_PER = 50;
+  const rPages = Math.max(1, Math.ceil(reportRows.length / R_PER));
+  const rRows = reportRows.slice((rPage - 1) * R_PER, rPage * R_PER);
 
   function jobToRow(j) {
     return {
@@ -242,7 +248,7 @@ export default function Dashboard() {
             </div>
           </section>
 
-          <section className="section">
+          <section className="section" id="reports">
             <div className="eyebrow">Reports</div>
             <div className="section-card" style={{ marginTop: 10 }}>
               <div className="form-grid">
@@ -258,6 +264,42 @@ export default function Dashboard() {
                 count: reportRows.filter((j) => (j.order_status || "") === s2).length,
                 color: stageColorVar(s2),
               }))} />
+              {reportRows.length > 0 && (
+                <div style={{ overflowX: "auto", marginTop: 14 }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+                    <thead>
+                      <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)" }}>
+                        {["Job ID", "Date", "Customer", "Product", "System", "Status", "Due", "Payment"].map((h) => (
+                          <th key={h} style={{ padding: "8px 8px", whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rRows.map((j) => (
+                        <tr key={j.job_id} style={{ borderBottom: "1px solid var(--line)", cursor: "pointer" }} onClick={() => router.push(`/jobs/${j.job_id}`)}>
+                          <td style={{ padding: "7px 8px", whiteSpace: "nowrap", fontWeight: 600 }}>{j.job_id}</td>
+                          <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>{(j.order_date || "").slice(0, 10)}</td>
+                          <td style={{ padding: "7px 8px" }}>{j.customer_name}</td>
+                          <td style={{ padding: "7px 8px" }}>{j.product_category}</td>
+                          <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>{j.designer_name || "—"}</td>
+                          <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>{j.order_status}</td>
+                          <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>{j.delivery_date ? String(j.delivery_date).slice(0, 10) : "—"}</td>
+                          <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>{(j.payment_status || "").toLowerCase() === "yes" ? "Paid" : "Pending"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {rPages > 1 && (
+                    <div className="chip-row" style={{ marginTop: 10, justifyContent: "center" }}>
+                      <button className="chip" disabled={rPage <= 1} onClick={() => setRPage(rPage - 1)}>‹ Prev</button>
+                      {Array.from({ length: rPages }, (_, i) => i + 1).map((p) => (
+                        <button key={p} className={`chip ${p === rPage ? "active" : ""}`} onClick={() => setRPage(p)}>Page {p}</button>
+                      ))}
+                      <button className="chip" disabled={rPage >= rPages} onClick={() => setRPage(rPage + 1)}>Next ›</button>
+                    </div>
+                  )}
+                </div>
+              )}
               <button className="btn-primary" onClick={() => downloadExcel(reportRows, "NPC-Report")} disabled={reportRows.length === 0}>Download Excel report (filtered)</button>
               <button className="btn-secondary" onClick={() => downloadExcel(jobs || [], "NPC-All-Job-Cards")} disabled={(jobs || []).length === 0}>Download ALL job cards (Excel)</button>
             </div>

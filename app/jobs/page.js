@@ -7,18 +7,20 @@ import Shell from "@/components/Shell";
 import { ORDER_STATUS, DESIGNERS } from "@/lib/options";
 import { stagePill, formatStamp } from "@/lib/status";
 
-const PER_PAGE = 30;
+const PER_PAGE = 50;
+const daysAgo = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const active = (j) => !["Delivered", "Cancelled"].includes(j.order_status);
 
 // Filter chips: label + matching rule (counts are shown on every chip)
 const CHIPS = [
-  { key: "All", fn: () => true },
+  { key: "All", fn: (j) => !j.production_complete },
   { key: "Today delivery", fn: (j) => j.delivery_date && String(j.delivery_date).slice(0, 10) === todayStr() && active(j) },
   { key: "Overdue", fn: (j) => j.delivery_date && String(j.delivery_date).slice(0, 10) < todayStr() && active(j) },
   { key: "Design required", fn: (j) => String(j.design_required || "") === "Yes" },
   ...ORDER_STATUS.map((s) => ({ key: s, fn: (j) => String(j.order_status || "").trim().toLowerCase() === s.toLowerCase() })),
   { key: "Review Pending", fn: (j) => j.order_status === "Delivered" && !j.review_done },
+  { key: "Completed", fn: (j) => !!j.production_complete },
 ];
 
 export default function JobsPage() {
@@ -52,7 +54,9 @@ export default function JobsPage() {
   // Base list: search + dates + system applied (chip counts are computed on this)
   const baseList = useMemo(() => {
     let list = jobs || [];
+    // Default view: last 30 days (set the From date to see older jobs)
     if (from) list = list.filter((j) => (j.order_date || "").slice(0, 10) >= from);
+    else list = list.filter((j) => (j.order_date || "").slice(0, 10) >= daysAgo(30));
     if (to) list = list.filter((j) => (j.order_date || "").slice(0, 10) <= to);
     if (system) list = list.filter((j) => (j.designer_name || "") === system);
     const q = query.trim().toLowerCase();
@@ -118,7 +122,7 @@ export default function JobsPage() {
         </div>
         <div className="form-grid" style={{ marginTop: 10 }}>
           <div>
-            <label className="f-label">From date</label>
+            <label className="f-label">From date (default: last 30 days)</label>
             <input className="text-input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           </div>
           <div>
@@ -171,7 +175,7 @@ export default function JobsPage() {
                     role="button"
                     onClick={(e) => {
                       e.preventDefault();
-                      window.open(`https://wa.me/91${j.mobile}?text=${encodeURIComponent(`Hi ${j.customer_name}, your order ${j.job_id} (${j.product_category}) is READY at NPC Prints & Gifts. Please collect it or await delivery. Thank you!`)}`, "_blank");
+                      window.open(`https://wa.me/91${j.mobile}?text=${encodeURIComponent(`Hi ${j.customer_name}, your order ${j.job_id} (${j.product_category}) is READY at NPC New Print Creations. Your product is ready - you can collect it after 30 mins. Thank you!`)}`, "_blank");
                     }}
                   >WhatsApp: order ready</span>
                 )}

@@ -6,7 +6,7 @@ import Shell from "@/components/Shell";
 import { Field, Select, Text, SelectWithOther, MultiSelect } from "@/components/Field";
 import {
   DESIGN_STATUS, DESIGNERS, PRODUCTION_STATUS, DELIVERY_STATUS,
-  WORK_TYPES, MACHINE_TYPES, PRODUCT_TYPES, PRIORITY, PAYMENT, YES_NO,
+  WORK_TYPES, MACHINE_TYPES, PRODUCT_TYPES, PRIORITY, PAYMENT, YES_NO, PRODUCTION_UNITS,
 } from "@/lib/options";
 import { STAGES, stagePill, stageIndex, formatStamp } from "@/lib/status";
 
@@ -93,10 +93,10 @@ export default function JobDetailPage() {
               {job.order_status === "Ready" && /^\d{10}$/.test(String(job.mobile || "")) && (
                 <div className="btn-row" style={{ marginTop: 12 }}>
                   <a className="btn-ghost" style={{ textAlign: "center", background: "#e7f8ee", borderColor: "#1f9d55", color: "#146c3a", fontWeight: 700 }}
-                    href={`https://wa.me/91${job.mobile}?text=${encodeURIComponent(`Hi ${job.customer_name}, your order ${job.job_id} (${job.product_category}) is READY at NPC Prints & Gifts. Please collect it or await delivery. Thank you!`)}`}
+                    href={`https://wa.me/91${job.mobile}?text=${encodeURIComponent(`Hi ${job.customer_name}, your order ${job.job_id} (${job.product_category}) is READY at NPC New Print Creations. Your product is ready - you can collect it after 30 mins. Thank you!`)}`}
                     target="_blank" rel="noopener noreferrer">Send WhatsApp — order ready</a>
                   <a className="btn-ghost" style={{ textAlign: "center" }}
-                    href={`sms:+91${job.mobile}?body=${encodeURIComponent(`Hi ${job.customer_name}, your order ${job.job_id} (${job.product_category}) is READY at NPC Prints & Gifts. Thank you!`)}`}>Send SMS</a>
+                    href={`sms:+91${job.mobile}?body=${encodeURIComponent(`Hi ${job.customer_name}, your order ${job.job_id} (${job.product_category}) is READY at NPC New Print Creations. You can collect it after 30 mins. Thank you!`)}`}>Send SMS</a>
                 </div>
               )}
             </div>
@@ -152,7 +152,7 @@ export default function JobDetailPage() {
               <Field label="Product category (select one or more)" full><MultiSelect value={job.product_category} onChange={(v) => set("product_category", v)} options={PRODUCT_TYPES} placeholder="Tap to select products" /></Field>
               <Field label="Quantity"><Text value={job.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" /></Field>
               <Field label="Design required"><Select value={job.design_required || "No"} onChange={(v) => set("design_required", v)} options={YES_NO} /></Field>
-              <Field label="Delivery date"><input className="text-input" type="date" value={job.delivery_date || ""} onChange={(e) => set("delivery_date", e.target.value)} /></Field>
+              <Field label={["owner", "manager"].includes(role) ? "Delivery date" : "Delivery date (admin/manager only)"}><input className="text-input" type="date" value={job.delivery_date || ""} onChange={(e) => set("delivery_date", e.target.value)} disabled={!["owner", "manager"].includes(role)} /></Field>
               <Field label="Priority"><Select value={job.priority} onChange={(v) => set("priority", v)} options={PRIORITY} /></Field>
               <Field label="Notes" full><textarea rows={2} value={job.notes || ""} onChange={(e) => set("notes", e.target.value)} /></Field>
             </div>
@@ -169,8 +169,9 @@ export default function JobDetailPage() {
           <section className="section-card">
             <div className="section-title"><span className="sec-dot" style={{ background: "var(--cyan)" }} />Production department</div>
             <div className="form-grid">
-              <Field label="Machine type"><SelectWithOther value={job.machine_type} onChange={(v) => set("machine_type", v)} options={MACHINE_TYPES} placeholder="Type the machine details" /></Field>
-              <Field label="Work type"><SelectWithOther value={job.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} placeholder="Type the work type" /></Field>
+              <Field label="Machine type (select one or more)"><MultiSelect value={job.machine_type} onChange={(v) => set("machine_type", v)} options={MACHINE_TYPES} placeholder="Tap to select machines" /></Field>
+              <Field label="Work type (select one or more)"><MultiSelect value={job.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} placeholder="Tap to select work types" /></Field>
+              <Field label="Production unit"><Select value={job.production_unit || ""} onChange={(v) => set("production_unit", v)} options={PRODUCTION_UNITS} /></Field>
               <Field label="Production status" full><Select value={job.production_status} onChange={(v) => set("production_status", v)} options={PRODUCTION_STATUS} /></Field>
             </div>
             <div style={{ marginTop: 10 }}>
