@@ -217,9 +217,7 @@ export function MultiSelect({ value, onChange, options, placeholder = "Tap to se
               onChange={(e) => { setOtherText(e.target.value); emit(standard, e.target.value, true); }}
             />
           )}
-          <div style={{ textAlign: "right", marginTop: 8 }}>
-            <button type="button" className="btn-ghost" onClick={() => setOpen(false)}>Done</button>
-          </div>
+          <button type="button" className="btn-primary" style={{ width: "100%", marginTop: 10 }} onClick={() => setOpen(false)}>✓ Done</button>
         </div>
       )}
     </div>

@@ -51,11 +51,18 @@ export async function PATCH(req, { params }) {
     const prodComplete = typeof b.production_complete === "boolean" ? b.production_complete : !!oldJ.production_complete;
     const designRequired = b.design_required === "Yes" ? "Yes" : "No";
 
-    // Delivery date can only be changed by admin or manager
-    const oldDate = oldJ.delivery_date ? String(oldJ.delivery_date).slice(0, 10) : "";
-    const newDate = b.delivery_date ? String(b.delivery_date).slice(0, 10) : "";
+    // Delivery date can only be changed by admin or manager.
+    // For other roles the old date is kept and the save still succeeds,
+    // so statuses are always auto-captured.
+    const toYMD = (v) => {
+      if (!v) return "";
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? String(v).slice(0, 10) : d.toISOString().slice(0, 10);
+    };
+    const oldDate = toYMD(oldJ.delivery_date);
+    let newDate = toYMD(b.delivery_date);
     if (oldDate !== newDate && !["owner", "manager"].includes(s.role)) {
-      return NextResponse.json({ error: "Only the admin or manager can change the delivery date" }, { status: 403 });
+      newDate = oldDate; // ignore the change instead of blocking the save
     }
 
     const history = parseHistory(oldJ.history);
@@ -87,7 +94,7 @@ export async function PATCH(req, { params }) {
       customer_name=${b.customer_name.trim()}, mobile=${String(b.mobile).trim()},
       product_category=${String(b.product_category || "").trim()}, quantity=${b.quantity || ""},
       payment_status=${payment},
-      delivery_date=${b.delivery_date || null}, priority=${b.priority || "Normal"},
+      delivery_date=${newDate || null}, priority=${b.priority || "Normal"},
       order_status=${orderStatus},
       designer_name=${b.designer_name || ""}, design_status=${b.design_status || ""},
       design_required=${designRequired},

@@ -17,7 +17,6 @@ const CHIPS = [
   { key: "All", fn: (j) => !j.production_complete },
   { key: "Today delivery", fn: (j) => j.delivery_date && String(j.delivery_date).slice(0, 10) === todayStr() && active(j) },
   { key: "Overdue", fn: (j) => j.delivery_date && String(j.delivery_date).slice(0, 10) < todayStr() && active(j) },
-  { key: "Design required", fn: (j) => String(j.design_required || "") === "Yes" },
   ...ORDER_STATUS.map((s) => ({ key: s, fn: (j) => String(j.order_status || "").trim().toLowerCase() === s.toLowerCase() })),
   { key: "Review Pending", fn: (j) => j.order_status === "Delivered" && !j.review_done },
   { key: "Completed", fn: (j) => !!j.production_complete },
@@ -148,7 +147,7 @@ export default function JobsPage() {
         {pageRows.map((j) => {
           const overdue = j.delivery_date && String(j.delivery_date).slice(0, 10) < todayStr() && active(j);
           const dueToday = j.delivery_date && String(j.delivery_date).slice(0, 10) === todayStr() && active(j);
-          const canComplete = active(j) && !j.production_complete;
+          const canComplete = j.order_status === "Delivered" && !j.production_complete;
           return (
             <Link href={`/jobs/${j.job_id}`} className="list-row" key={j.job_id}>
               <div className="row-top">
