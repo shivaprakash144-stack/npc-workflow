@@ -20,7 +20,11 @@ export async function GET() {
   try {
     await ensureSchema();
     const q = sql();
-    const enquiries = await q`SELECT * FROM enquiries ORDER BY created_at DESC`;
+    // ref_image (base64) is EXCLUDED from the list to save network transfer;
+    // has_ref_image tells the UI an image exists. Image loads only if needed.
+    const enquiries = await q`SELECT enquiry_id, customer_id, customer_name, mobile, product_type, size_material, quantity, design_required, est_price, status, designer_name, priority, enquiry_mode, history, created_at, updated_at,
+      (COALESCE(ref_image, '') <> '') AS has_ref_image
+      FROM enquiries ORDER BY created_at DESC`;
     return NextResponse.json({ enquiries });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 502 });
@@ -63,7 +67,7 @@ export async function PUT(req) {
     const bad = validate(b);
     if (bad) return NextResponse.json({ error: bad }, { status: 400 });
     const q = sql();
-    const rows = await q`SELECT status, history FROM enquiries WHERE enquiry_id=${b.enquiry_id}`;
+    const rows = await q`SELECT status, history, ref_image FROM enquiries WHERE enquiry_id=${b.enquiry_id}`;
     const old = rows[0] || {};
     const history = parseHistory(old.history);
     if (String(old.status || "") !== String(b.status || "")) {
@@ -71,7 +75,7 @@ export async function PUT(req) {
     } else {
       history.push(entry(g.s.user, "Enquiry updated"));
     }
-    await q`UPDATE enquiries SET customer_name=${b.customer_name.trim()}, mobile=${String(b.mobile).trim()}, product_type=${b.product_type || ""}, size_material=${b.size_material || ""}, quantity=${b.quantity || ""}, design_required=${b.design_required || "No"}, ref_image=${b.ref_image || ""}, est_price=${b.est_price || ""}, status=${b.status || "New Enquiry"}, designer_name=${b.designer_name || ""}, priority=${b.priority || "Normal"}, enquiry_mode=${b.enquiry_mode || ""}, history=${JSON.stringify(history)}, updated_at=now() WHERE enquiry_id=${b.enquiry_id}`;
+    await q`UPDATE enquiries SET customer_name=${b.customer_name.trim()}, mobile=${String(b.mobile).trim()}, product_type=${b.product_type || ""}, size_material=${b.size_material || ""}, quantity=${b.quantity || ""}, design_required=${b.design_required || "No"}, ref_image=${b.ref_image === "__KEEP__" ? (old.ref_image || "") : (b.ref_image || "")}, est_price=${b.est_price || ""}, status=${b.status || "New Enquiry"}, designer_name=${b.designer_name || ""}, priority=${b.priority || "Normal"}, enquiry_mode=${b.enquiry_mode || ""}, history=${JSON.stringify(history)}, updated_at=now() WHERE enquiry_id=${b.enquiry_id}`;
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 502 });

@@ -57,7 +57,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 60000);
+    const t = setInterval(load, 300000); // 5 min — reduces database network transfer
     return () => clearInterval(t);
   }, [load]);
 

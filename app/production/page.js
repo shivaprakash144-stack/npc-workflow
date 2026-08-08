@@ -36,7 +36,7 @@ export default function ProductionPage() {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 60000);
+    const t = setInterval(load, 300000); // 5 min — reduces database network transfer
     return () => clearInterval(t);
   }, [load]);
 

@@ -28,28 +28,58 @@ export function Text({ value, onChange, ...rest }) {
 }
 
 export function FileUpload({ label, value, onChange }) {
-  function pick(e) {
+  const [busy, setBusy] = React.useState(false);
+
+  async function pick(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      alert("File must be under 4 MB");
+      return;
+    }
+    setBusy(true);
+    // Prefer Vercel Blob (URL stored, keeps the database small).
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          onChange(data.url);
+          setBusy(false);
+          return;
+        }
+      }
+    } catch {}
+    // Fallback: base64 in the database (old behaviour, 2 MB limit)
     if (file.size > 2 * 1024 * 1024) {
-      alert("File must be under 2 MB");
+      alert("File must be under 2 MB (cloud file storage is not configured)");
+      setBusy(false);
       return;
     }
     const r = new FileReader();
-    r.onload = () => onChange(r.result);
+    r.onload = () => { onChange(r.result); setBusy(false); };
+    r.onerror = () => setBusy(false);
     r.readAsDataURL(file);
   }
-  const isImage = (value || "").startsWith("data:image");
+
+  const v = value || "";
+  const isImage = v.startsWith("data:image") || (/^https?:/.test(v) && /\.(png|jpe?g|gif|webp|bmp)(\?|$)/i.test(v));
+  const isUrl = /^https?:/.test(v);
+  const kept = v === "__KEEP__";
   return (
     <div>
       <label className="upload-box">
         <input type="file" accept="image/*,.pdf" onChange={pick} style={{ display: "none" }} />
-        {value ? (
-          isImage ? <img src={value} alt="" className="thumb" /> : <span className="pill pill-gray">PDF attached</span>
+        {busy ? (
+          <span className="pill pill-gray">Uploading…</span>
+        ) : value ? (
+          isImage ? <img src={value} alt="" className="thumb" /> : <span className="pill pill-gray">{kept ? "Image on file" : isUrl ? "File attached" : "PDF attached"}</span>
         ) : (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 16V4m0 0 4 4m-4-4L8 8M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
         )}
-        <span>{value ? "Tap to replace" : label}</span>
+        <span>{busy ? "Please wait" : value ? "Tap to replace" : label}</span>
         {value && (
           <button type="button" className="btn-ghost" style={{ marginLeft: "auto" }} onClick={(e) => { e.preventDefault(); onChange(""); }}>Remove</button>
         )}

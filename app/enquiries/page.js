@@ -73,7 +73,9 @@ export default function EnquiriesPage() {
   }
 
   function edit(e) {
-    setForm({ ...empty, ...e });
+    // Image is not downloaded with the list (saves data). "__KEEP__" tells the
+    // server to keep the existing image unless a new one is uploaded/removed.
+    setForm({ ...empty, ...e, ref_image: e.has_ref_image ? "__KEEP__" : "" });
     setEditing(e.enquiry_id);
     setShowForm(true);
     window.scrollTo({ top: 0 });
