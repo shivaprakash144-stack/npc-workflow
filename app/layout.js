@@ -3,6 +3,8 @@ import "./globals.css";
 export const metadata = {
   title: "NPC Workhub",
   description: "NPC New Print Creations — Workhub",
+  manifest: "/manifest.json",
+  icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
 };
 
 export const viewport = {

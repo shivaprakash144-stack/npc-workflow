@@ -33,6 +33,20 @@ export default function Dashboard() {
   const [drill, setDrill] = useState(null);
   const [rf, setRf] = useState({ from: "", to: "", machine: "", work: "", status: "All" });
   const [rPage, setRPage] = useState(1);
+  const [showReports, setShowReports] = useState(false);
+
+  // Reports open only via the ☰ menu (link to /#reports)
+  useEffect(() => {
+    const check = () => setShowReports(window.location.hash === "#reports");
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+  }, []);
+
+  function closeReports() {
+    history.replaceState(null, "", window.location.pathname);
+    setShowReports(false);
+  }
 
   const load = useCallback(async () => {
     try {
@@ -264,8 +278,12 @@ export default function Dashboard() {
             </div>
           </section>
 
+          {showReports && (
           <section className="section" id="reports">
-            <div className="eyebrow">Reports</div>
+            <div className="row-top">
+              <div className="eyebrow">Reports</div>
+              <button className="btn-ghost" onClick={closeReports}>✕ Close</button>
+            </div>
             <div className="section-card" style={{ marginTop: 10 }}>
               <div className="form-grid">
                 <Field label="From date"><input className="text-input" type="date" value={rf.from} onChange={(e) => setRf((f) => ({ ...f, from: e.target.value }))} /></Field>
@@ -274,6 +292,10 @@ export default function Dashboard() {
                 <Field label="Work type"><Select value={rf.work} onChange={(v) => setRf((f) => ({ ...f, work: v }))} options={WORK_TYPES} /></Field>
                 <Field label="Order status" full><Select value={rf.status} onChange={(v) => setRf((f) => ({ ...f, status: v }))} options={["All", ...ORDER_STATUS]} /></Field>
               </div>
+              {!rf.from ? (
+                <div className="empty" style={{ marginTop: 12 }}>Select a From date (and To date) above to view the job report.</div>
+              ) : (
+              <>
               <p className="muted" style={{ marginTop: 10 }}>{reportRows.length} job{reportRows.length === 1 ? "" : "s"} match these filters.</p>
               <Pie data={ORDER_STATUS.map((s2) => ({
                 label: s2,
@@ -318,8 +340,11 @@ export default function Dashboard() {
               )}
               <button className="btn-primary" onClick={() => downloadExcel(reportRows, "NPC-Report")} disabled={reportRows.length === 0}>Download Excel report (filtered)</button>
               <button className="btn-secondary" onClick={() => downloadExcel(jobs || [], "NPC-All-Job-Cards")} disabled={(jobs || []).length === 0}>Download ALL job cards (Excel)</button>
+              </>
+              )}
             </div>
           </section>
+          )}
         </>
       )}
     </Shell>
