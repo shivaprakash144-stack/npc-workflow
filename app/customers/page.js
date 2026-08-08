@@ -39,6 +39,22 @@ export default function CustomersPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Refresh when the user returns to the app (min 60s between refreshes)
+  useEffect(() => {
+    let last = Date.now();
+    const maybe = () => {
+      if (Date.now() - last > 60000) { last = Date.now(); load(); }
+    };
+    const onVis = () => { if (document.visibilityState === "visible") maybe(); };
+    window.addEventListener("focus", maybe);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("focus", maybe);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [load]);
+
+
   // Build the customer database from jobs + enquiries (grouped by mobile)
   const customers = useMemo(() => {
     const map = new Map();
