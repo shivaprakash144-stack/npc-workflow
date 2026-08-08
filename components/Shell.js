@@ -102,7 +102,7 @@ export default function Shell({ title, children, back }) {
             </MenuGroup>
 
             <MenuGroup title="Reports">
-              <MenuItem href="/#reports" onGo={() => setMenuOpen(false)}>Jobs report (filters + Excel)</MenuItem>
+              <MenuItem href="/?reports=1" onGo={() => setMenuOpen(false)}>Jobs report (filters + Excel)</MenuItem>
               <MenuItem href="/customers" onGo={() => setMenuOpen(false)}>Customer report</MenuItem>
             </MenuGroup>
 

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Shell from "@/components/Shell";
 import { Field, Select } from "@/components/Field";
 import Pie from "@/components/Pie";
@@ -25,7 +25,7 @@ const DRILLS = {
   newEnq: { label: "New enquiries", accent: "var(--magenta)", fn: null }, // enquiries drill
 };
 
-export default function Dashboard() {
+function Dashboard() {
   const router = useRouter();
   const [jobs, setJobs] = useState(null);
   const [enquiries, setEnquiries] = useState([]);
@@ -33,19 +33,18 @@ export default function Dashboard() {
   const [drill, setDrill] = useState(null);
   const [rf, setRf] = useState({ from: "", to: "", machine: "", work: "", status: "All" });
   const [rPage, setRPage] = useState(1);
-  const [showReports, setShowReports] = useState(false);
+  const searchParams = useSearchParams();
+  // Reports open only via the ☰ menu (link to /?reports=1)
+  const showReports = searchParams.get("reports") === "1";
 
-  // Reports open only via the ☰ menu (link to /#reports)
   useEffect(() => {
-    const check = () => setShowReports(window.location.hash === "#reports");
-    check();
-    window.addEventListener("hashchange", check);
-    return () => window.removeEventListener("hashchange", check);
-  }, []);
+    if (showReports) {
+      setTimeout(() => document.getElementById("reports")?.scrollIntoView({ behavior: "smooth" }), 150);
+    }
+  }, [showReports]);
 
   function closeReports() {
-    history.replaceState(null, "", window.location.pathname);
-    setShowReports(false);
+    router.replace("/");
   }
 
   const load = useCallback(async () => {
@@ -348,5 +347,14 @@ export default function Dashboard() {
         </>
       )}
     </Shell>
+  );
+}
+
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="spinner" />}>
+      <Dashboard />
+    </Suspense>
   );
 }
