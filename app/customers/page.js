@@ -7,6 +7,12 @@ import Shell from "@/components/Shell";
 import { stagePill, formatStamp } from "@/lib/status";
 
 const PER_PAGE = 50;
+const qDigitsOf = (raw) => {
+  let d = String(raw || "").replace(/\D/g, "");
+  if (d.length === 12 && d.startsWith("91")) d = d.slice(2);
+  if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
+  return d;
+};
 const st = (v) => (v || "").toLowerCase();
 
 export default function CustomersPage() {
@@ -86,8 +92,9 @@ export default function CustomersPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const qd = qDigitsOf(query);
     if (!q) return customers;
-    return customers.filter((c) => (c.name || "").toLowerCase().includes(q) || c.mobile.includes(q));
+    return customers.filter((c) => (c.name || "").toLowerCase().includes(q) || c.mobile.includes(q) || (qd.length >= 4 && c.mobile.includes(qd)));
   }, [customers, query]);
 
   useEffect(() => { setPage(1); }, [query]);

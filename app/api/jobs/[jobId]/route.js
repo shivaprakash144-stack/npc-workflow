@@ -50,6 +50,7 @@ export async function PATCH(req, { params }) {
     const reviewDone = typeof b.review_done === "boolean" ? b.review_done : !!oldJ.review_done;
     const prodComplete = typeof b.production_complete === "boolean" ? b.production_complete : !!oldJ.production_complete;
     const designRequired = b.design_required === "Yes" ? "Yes" : "No";
+    const cancelReason = wantCancelled ? String(b.cancel_reason || oldJ.cancel_reason || "").trim() : "";
 
     // Delivery date can only be changed by admin or manager.
     // For other roles the old date is kept and the save still succeeds,
@@ -68,7 +69,7 @@ export async function PATCH(req, { params }) {
     const history = parseHistory(oldJ.history);
     const changes = jobChanges(oldJ, { ...b, payment_status: payment, design_required: designRequired }, orderStatus);
     for (const c of changes) history.push(entry(s.user, c));
-    if (b.cancelled && oldJ.order_status !== "Cancelled") history.push(entry(s.user, "Job cancelled"));
+    if (b.cancelled && oldJ.order_status !== "Cancelled") history.push(entry(s.user, `Job cancelled${cancelReason ? " — " + cancelReason : ""}`));
     if (!b.cancelled && oldJ.order_status === "Cancelled") history.push(entry(s.user, "Job reactivated"));
     if (prodComplete !== !!oldJ.production_complete) {
       history.push(entry(s.user, prodComplete ? "Marked complete (removed from production)" : "Reopened in production"));
@@ -100,6 +101,7 @@ export async function PATCH(req, { params }) {
       design_required=${designRequired},
       machine_type=${b.machine_type || ""}, work_type=${b.work_type || ""}, production_status=${b.production_status || ""},
       production_unit=${b.production_unit || ""},
+      cancel_reason=${cancelReason},
       delivery_status=${b.delivery_status || ""},
       production_complete=${prodComplete},
       review_done=${reviewDone},

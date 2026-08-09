@@ -7,6 +7,12 @@ import { Field, Select, MultiSelect } from "@/components/Field";
 import { PRODUCTION_STATUS, WORK_TYPES, MACHINE_TYPES, PRODUCTION_UNITS } from "@/lib/options";
 import { stagePill, formatStamp } from "@/lib/status";
 
+const qDigitsOf = (raw) => {
+  let d = String(raw || "").replace(/\D/g, "");
+  if (d.length === 12 && d.startsWith("91")) d = d.slice(2);
+  if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
+  return d;
+};
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const daysAgo = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 const PER_PAGE = 50;
@@ -95,10 +101,12 @@ export default function ProductionPage() {
     if (to) list = list.filter((j) => String(j.order_date || "").slice(0, 10) <= to);
     if (unit) list = list.filter((j) => (j.production_unit || "") === unit);
     if (q) {
+      const qd = qDigitsOf(query);
       list = list.filter((j) =>
         j.job_id.toLowerCase().includes(q) ||
         (j.customer_name || "").toLowerCase().includes(q) ||
-        (j.mobile || "").includes(q)
+        (j.mobile || "").includes(q) ||
+        (qd.length >= 4 && (j.mobile || "").includes(qd))
       );
     }
     return list;

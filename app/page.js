@@ -161,6 +161,7 @@ function Dashboard() {
       "Delivery Date": j.delivery_date ? String(j.delivery_date).slice(0, 10) : "",
       "Payment": j.payment_status,
       "Google Review": st(j.order_status) === "delivered" ? (j.review_done ? "Done" : "Pending") : "",
+      "Cancel Reason": j.cancel_reason || "",
       "Last Updated": j.updated_at ? formatStamp(j.updated_at) : "",
       "Notes": j.notes,
     };

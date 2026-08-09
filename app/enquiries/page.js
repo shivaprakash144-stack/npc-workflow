@@ -9,6 +9,13 @@ import { ENQUIRY_STATUS, PRODUCT_TYPES, YES_NO, DESIGNERS, PRIORITY, ENQUIRY_MOD
 import { formatStamp } from "@/lib/status";
 
 const PER_PAGE = 50;
+const qDigitsOf = (raw) => {
+  let d = String(raw || "").replace(/\D/g, "");
+  if (d.length === 12 && d.startsWith("91")) d = d.slice(2);
+  if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
+  return d;
+};
+
 const daysAgo = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 
 const empty = {
@@ -107,10 +114,12 @@ export default function EnquiriesPage() {
     if (system) l = l.filter((e) => (e.designer_name || "") === system);
     if (prio !== "All") l = l.filter((e) => (e.priority || "Normal") === prio);
     if (q) {
+      const qd = qDigitsOf(query);
       l = l.filter((e) =>
         (e.customer_name || "").toLowerCase().includes(q) ||
         (e.mobile || "").includes(q) ||
-        (e.enquiry_id || "").toLowerCase().includes(q)
+        (e.enquiry_id || "").toLowerCase().includes(q) ||
+        (qd.length >= 4 && (e.mobile || "").includes(qd))
       );
     }
     return l;
@@ -212,7 +221,7 @@ export default function EnquiriesPage() {
               <span className="job-id">{e.enquiry_id}</span>
               <span style={{ display: "flex", gap: 6 }}>
                 {e.priority === "Urgent" && <span className="pill pill-urgent">Urgent</span>}
-                <span className={`pill ${e.status === "Confirmed" ? "pill-key" : e.status === "Cancelled" ? "pill-red" : e.status === "Quote Sent" ? "pill-cyan" : "pill-magenta"}`}>{e.status}</span>
+                <span className={`pill ${e.status === "Confirmed" ? "pill-key" : e.status === "Cancelled" ? "pill-red" : e.status === "Quote Sent" ? "pill-cyan" : e.status === "Follow Up" ? "pill-yellow" : "pill-magenta"}`}>{e.status}</span>
               </span>
             </div>
             <div className="row-title">{e.customer_name}</div>

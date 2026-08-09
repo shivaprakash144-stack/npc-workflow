@@ -6,7 +6,7 @@ import Shell from "@/components/Shell";
 import { Field, Select, Text, SelectWithOther, MultiSelect } from "@/components/Field";
 import {
   DESIGN_STATUS, DESIGNERS, PRODUCTION_STATUS, DELIVERY_STATUS,
-  WORK_TYPES, MACHINE_TYPES, PRODUCT_TYPES, PRIORITY, PAYMENT, YES_NO, PRODUCTION_UNITS,
+  WORK_TYPES, MACHINE_TYPES, PRODUCT_TYPES, PRIORITY, PAYMENT, YES_NO, PRODUCTION_UNITS, CANCEL_REASONS,
 } from "@/lib/options";
 import { STAGES, stagePill, stageIndex, formatStamp } from "@/lib/status";
 
@@ -18,6 +18,8 @@ export default function JobDetailPage() {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState("");
   const [role, setRole] = useState("staff");
+  const [showCancel, setShowCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   useEffect(() => {
     const m = document.cookie.match(/(?:^|;\s*)npc_role=([^;]+)/);
@@ -104,7 +106,7 @@ export default function JobDetailPage() {
             <div className="ticket-body">
               <div className="eyebrow">Job progress</div>
               {cancelled ? (
-                <div className="alert alert-error" style={{ marginTop: 10 }}>This job was cancelled.</div>
+                <div className="alert alert-error" style={{ marginTop: 10 }}>This job was cancelled{job.cancel_reason ? ` — ${job.cancel_reason}` : ""}.</div>
               ) : (
                 <div className="timeline">
                   {timelineStages.map((stage, i) => {
@@ -222,11 +224,26 @@ export default function JobDetailPage() {
           </div>
 
           {["owner", "manager"].includes(role) && (
-            <div className="btn-row" style={{ marginTop: 12 }}>
+            <div style={{ marginTop: 12 }}>
               {cancelled ? (
-                <button className="btn-secondary" onClick={() => { set("order_status", ""); save({ cancelled: false }); }} disabled={busy}>Reactivate job</button>
+                <div className="btn-row">
+                  <button className="btn-secondary" onClick={() => { set("order_status", ""); save({ cancelled: false, cancel_reason: "" }); }} disabled={busy}>Reactivate job</button>
+                </div>
+              ) : showCancel ? (
+                <div className="section-card">
+                  <div className="section-title"><span className="sec-dot" style={{ background: "var(--red)" }} />Reason for cancellation *</div>
+                  <SelectWithOther value={cancelReason} onChange={setCancelReason} options={CANCEL_REASONS} placeholder="Type the reason" />
+                  <div className="btn-row" style={{ marginTop: 12 }}>
+                    <button className="btn-secondary" onClick={() => { setShowCancel(false); setCancelReason(""); }} disabled={busy}>Back</button>
+                    <button className="btn-secondary btn-danger-ghost" disabled={busy || !cancelReason.trim()} onClick={() => { set("order_status", "Cancelled"); save({ cancelled: true, cancel_reason: cancelReason.trim() }); setShowCancel(false); }}>
+                      {busy ? "Cancelling…" : "Confirm cancel"}
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <button className="btn-secondary btn-danger-ghost" onClick={() => { set("order_status", "Cancelled"); save({ cancelled: true }); }} disabled={busy}>Cancel this job</button>
+                <div className="btn-row">
+                  <button className="btn-secondary btn-danger-ghost" onClick={() => setShowCancel(true)} disabled={busy}>Cancel this job</button>
+                </div>
               )}
             </div>
           )}

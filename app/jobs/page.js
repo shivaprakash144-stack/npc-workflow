@@ -10,6 +10,12 @@ import { stagePill, formatStamp } from "@/lib/status";
 const PER_PAGE = 50;
 const daysAgo = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 const todayStr = () => new Date().toISOString().slice(0, 10);
+const qDigitsOf = (raw) => {
+  let d = String(raw || "").replace(/\D/g, "");
+  if (d.length === 12 && d.startsWith("91")) d = d.slice(2);
+  if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
+  return d;
+};
 const active = (j) => !["Delivered", "Cancelled"].includes(j.order_status);
 
 // Filter chips: label + matching rule (counts are shown on every chip)
@@ -75,12 +81,14 @@ export default function JobsPage() {
     if (to) list = list.filter((j) => (j.order_date || "").slice(0, 10) <= to);
     if (system) list = list.filter((j) => (j.designer_name || "") === system);
     const q = query.trim().toLowerCase();
+    const qd = qDigitsOf(query);
     if (q) {
       list = list.filter(
         (j) =>
           (j.job_id || "").toLowerCase().includes(q) ||
           (j.customer_name || "").toLowerCase().includes(q) ||
-          (j.mobile || "").includes(q)
+          (j.mobile || "").includes(q) ||
+          (qd.length >= 4 && (j.mobile || "").includes(qd))
       );
     }
     return list;
