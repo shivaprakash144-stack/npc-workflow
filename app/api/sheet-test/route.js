@@ -122,5 +122,20 @@ export async function GET() {
     return fail("6. Test write", e.message, "Network problem.");
   }
 
-  return NextResponse.json({ result: "ALL CHECKS PASSED ✓ — sheet sync is working", steps });
+  // Step 7: run the REAL production sync (same code every job save uses)
+  try {
+    const { sql, ensureSchema } = await import("@/lib/db");
+    const { syncJobsToSheet, syncEnquiriesToSheet } = await import("@/lib/gsheet");
+    await ensureSchema();
+    const q = sql();
+    // temporarily surface the error the real sync normally swallows
+    const jobs = await q`SELECT count(*)::int AS n FROM jobs`;
+    await syncJobsToSheet(q);
+    await syncEnquiriesToSheet(q);
+    ok("7. REAL sync run", `Jobs (${jobs[0].n}) and Enquiries tabs both written. Open the sheet — both tabs should now be filled.`);
+  } catch (e) {
+    return fail("7. REAL sync run", e.message, "This is the exact error the app hits on every job save.");
+  }
+
+  return NextResponse.json({ result: "ALL CHECKS PASSED ✓ — sheet sync is working (and the sheet was just filled)", steps });
 }

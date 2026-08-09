@@ -3,7 +3,7 @@ import { requireSession } from "@/lib/auth";
 import { sql, ensureSchema, nextJobId } from "@/lib/db";
 import { isValidMobile } from "@/lib/derive";
 import { entry } from "@/lib/history";
-import { syncJobsToSheet } from "@/lib/gsheet";
+import { syncJobsToSheet, syncEnquiriesToSheet } from "@/lib/gsheet";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +42,10 @@ export async function POST(req) {
       try {
         await q`INSERT INTO jobs (job_id, enquiry_id, customer_name, mobile, product_category, quantity, payment_status, delivery_date, priority, order_status, work_type, designer_name, design_required, production_unit, notes, history, production_complete)
           VALUES (${id}, ${b.enquiry_id || ""}, ${b.customer_name.trim()}, ${String(b.mobile).trim()}, ${String(b.product_category).trim()}, ${b.quantity}, ${payment}, ${b.delivery_date}, ${b.priority || "Normal"}, 'Design Pending', ${b.work_type || ""}, ${b.designer_name || ""}, ${b.design_required || "No"}, ${b.production_unit || ""}, ${b.notes || ""}, ${history}, false)`;
-        if (b.enquiry_id) await q`UPDATE enquiries SET status='Confirmed' WHERE enquiry_id=${b.enquiry_id}`;
+        if (b.enquiry_id) {
+          await q`UPDATE enquiries SET status='Confirmed' WHERE enquiry_id=${b.enquiry_id}`;
+          await syncEnquiriesToSheet(q);
+        }
         await syncJobsToSheet(q);
         return NextResponse.json({ ok: true, job_id: id });
       } catch (err) {
