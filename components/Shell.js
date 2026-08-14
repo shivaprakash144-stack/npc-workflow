@@ -106,6 +106,10 @@ export default function Shell({ title, children, back }) {
               <MenuItem href="/customers" onGo={() => setMenuOpen(false)}>Customer report</MenuItem>
             </MenuGroup>
 
+            <MenuGroup title="Admin">
+              <MenuItem href="/users" onGo={() => setMenuOpen(false)}>User accounts</MenuItem>
+            </MenuGroup>
+
             <MenuGroup title="Account">
               <button
                 className="btn-ghost"

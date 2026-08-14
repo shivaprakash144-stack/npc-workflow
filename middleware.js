@@ -33,13 +33,13 @@ export async function middleware(req) {
   if (role === "production" && !pathname.startsWith("/production")) {
     return NextResponse.redirect(new URL("/production", req.url));
   }
-  // Dashboard is owner/manager only
-  if (pathname === "/" && !["owner", "manager"].includes(role)) {
+  // Dashboard and User accounts are owner/manager only
+  if (["/", "/users"].includes(pathname) && !["owner", "manager"].includes(role)) {
     return NextResponse.redirect(new URL(homeFor(role), req.url));
   }
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/", "/jobs/:path*", "/enquiries", "/customers", "/production", "/login"],
+  matcher: ["/", "/users", "/jobs/:path*", "/enquiries", "/customers", "/production", "/login"],
 };

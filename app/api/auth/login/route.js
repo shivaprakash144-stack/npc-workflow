@@ -15,7 +15,7 @@ export async function POST(req) {
     if (recent.length >= 8) {
       return NextResponse.json({ error: "Too many attempts. Try again in a few minutes" }, { status: 429 });
     }
-    const found = checkCredentials(username, password);
+    const found = await checkCredentials(username, password);
     if (!found) {
       recent.push(now);
       attempts.set(key, recent);
