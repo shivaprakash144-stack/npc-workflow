@@ -33,8 +33,12 @@ export async function middleware(req) {
   if (role === "production" && !pathname.startsWith("/production")) {
     return NextResponse.redirect(new URL("/production", req.url));
   }
-  // Dashboard and User accounts are owner/manager only
-  if (["/", "/users"].includes(pathname) && !["owner", "manager"].includes(role)) {
+  // Dashboard is owner/manager only
+  if (pathname === "/" && !["owner", "manager"].includes(role)) {
+    return NextResponse.redirect(new URL(homeFor(role), req.url));
+  }
+  // User accounts is owner only
+  if (pathname === "/users" && role !== "owner") {
     return NextResponse.redirect(new URL(homeFor(role), req.url));
   }
   return NextResponse.next();

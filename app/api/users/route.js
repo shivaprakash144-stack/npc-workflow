@@ -3,13 +3,13 @@ import { requireSession, hashPassword, ROLES } from "@/lib/auth";
 import { sql, ensureSchema } from "@/lib/db";
 
 function forbidden() {
-  return NextResponse.json({ error: "Only the admin or manager can manage user accounts" }, { status: 403 });
+  return NextResponse.json({ error: "Only the admin/owner can manage user accounts" }, { status: 403 });
 }
 
 export async function GET() {
   const s = await requireSession();
   if (!s) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  if (!["owner", "manager"].includes(s.role)) return forbidden();
+  if (s.role !== "owner") return forbidden();
   try {
     await ensureSchema();
     const q = sql();
@@ -23,7 +23,7 @@ export async function GET() {
 export async function POST(req) {
   const s = await requireSession();
   if (!s) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  if (!["owner", "manager"].includes(s.role)) return forbidden();
+  if (s.role !== "owner") return forbidden();
   try {
     await ensureSchema();
     const b = await req.json();

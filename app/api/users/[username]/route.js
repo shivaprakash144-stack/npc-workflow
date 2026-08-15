@@ -3,7 +3,7 @@ import { requireSession, hashPassword, ROLES } from "@/lib/auth";
 import { sql, ensureSchema } from "@/lib/db";
 
 function forbidden() {
-  return NextResponse.json({ error: "Only the admin or manager can manage user accounts" }, { status: 403 });
+  return NextResponse.json({ error: "Only the admin/owner can manage user accounts" }, { status: 403 });
 }
 
 async function countActiveOwners(q, excludingUsername) {
@@ -14,7 +14,7 @@ async function countActiveOwners(q, excludingUsername) {
 export async function PATCH(req, { params }) {
   const s = await requireSession();
   if (!s) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  if (!["owner", "manager"].includes(s.role)) return forbidden();
+  if (s.role !== "owner") return forbidden();
   const username = String(params.username || "").trim().toLowerCase();
   try {
     await ensureSchema();
@@ -64,7 +64,7 @@ export async function PATCH(req, { params }) {
 export async function DELETE(req, { params }) {
   const s = await requireSession();
   if (!s) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  if (!["owner", "manager"].includes(s.role)) return forbidden();
+  if (s.role !== "owner") return forbidden();
   const username = String(params.username || "").trim().toLowerCase();
   if (username === s.user) {
     return NextResponse.json({ error: "You can't delete the account you're signed in with" }, { status: 400 });
