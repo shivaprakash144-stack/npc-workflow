@@ -17,6 +17,11 @@ const qDigitsOf = (raw) => {
   return d;
 };
 const active = (j) => !["Delivered", "Cancelled"].includes(j.order_status);
+const FILTER_KEY = "npc_jobs_filters";
+function loadSavedFilters() {
+  if (typeof window === "undefined") return null;
+  try { return JSON.parse(sessionStorage.getItem(FILTER_KEY) || "null"); } catch { return null; }
+}
 
 // Filter chips: label + matching rule (counts are shown on every chip)
 const CHIPS = [
@@ -26,20 +31,28 @@ const CHIPS = [
   ...ORDER_STATUS.map((s) => ({ key: s, fn: (j) => String(j.order_status || "").trim().toLowerCase() === s.toLowerCase() })),
   { key: "Review Pending", fn: (j) => j.order_status === "Delivered" && !j.review_done },
   { key: "Completed", fn: (j) => !!j.production_complete },
+  { key: "Hold", fn: (j) => j.design_status === "Hold" },
 ];
 
 export default function JobsPage() {
   const router = useRouter();
+  const saved = loadSavedFilters();
   const [jobs, setJobs] = useState(null);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("All");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [system, setSystem] = useState("");
-  const [page, setPage] = useState(1);
+  const [query, setQuery] = useState(saved?.query ?? "");
+  const [filter, setFilter] = useState(saved?.filter ?? "All");
+  const [from, setFrom] = useState(saved?.from ?? "");
+  const [to, setTo] = useState(saved?.to ?? "");
+  const [system, setSystem] = useState(saved?.system ?? "");
+  const [page, setPage] = useState(saved?.page ?? 1);
   const [busyId, setBusyId] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => { setHydrated(true); }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    sessionStorage.setItem(FILTER_KEY, JSON.stringify({ query, filter, from, to, system, page }));
+  }, [hydrated, query, filter, from, to, system, page]);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/jobs", { cache: "no-store" });
@@ -105,8 +118,9 @@ export default function JobsPage() {
     return baseList.filter(ch.fn);
   }, [baseList, filter]);
 
-  // Pagination: 30 per page
-  useEffect(() => { setPage(1); }, [query, filter, from, to, system]);
+  // Pagination: 30 per page (skip on the very first render so a restored
+  // page number from sessionStorage isn't immediately reset to 1)
+  useEffect(() => { if (hydrated) setPage(1); }, [query, filter, from, to, system]);
   const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
@@ -178,11 +192,12 @@ export default function JobsPage() {
                 <span className="job-id">{j.job_id}</span>
                 <span style={{ display: "flex", gap: 6 }}>
                   {j.priority === "Urgent" && <span className="pill pill-urgent">Urgent</span>}
+                  {j.design_status === "Hold" && <span className="pill pill-red">On Hold</span>}
                   <span className={`pill ${stagePill(j.order_status)}`}><span className="dot" />{j.order_status}</span>
                 </span>
               </div>
               <div className="row-title">{j.customer_name}</div>
-              <div className="row-sub">{[j.product_category, j.quantity && `Qty ${j.quantity}`, j.work_type].filter(Boolean).join(" · ")}</div>
+              <div className="row-sub">{[j.product_category, j.size_material, j.quantity && `Qty ${j.quantity}`, j.work_type].filter(Boolean).join(" · ")}</div>
               <div className="order-foot">
                 <span style={overdue ? { color: "var(--red)", fontWeight: 700 } : dueToday ? { color: "var(--ink)", fontWeight: 700 } : {}}>
                   Due {j.delivery_date ? String(j.delivery_date).slice(0, 10) : "—"}{overdue ? " · overdue" : dueToday ? " · today" : ""}

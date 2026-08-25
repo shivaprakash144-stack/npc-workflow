@@ -85,7 +85,10 @@ export default function JobDetailPage() {
             <div className="ticket-head">
               <div className="order-top">
                 <span className="job-id">{job.job_id}{job.enquiry_id ? ` · from ${job.enquiry_id}` : ""}</span>
-                <span className={`pill ${stagePill(job.order_status)}`}><span className="dot" />{job.order_status}</span>
+                <span style={{ display: "flex", gap: 6 }}>
+                  {job.design_status === "Hold" && <span className="pill pill-red">On Hold</span>}
+                  <span className={`pill ${stagePill(job.order_status)}`}><span className="dot" />{job.order_status}</span>
+                </span>
               </div>
               <h1 className="h1" style={{ marginTop: 8 }}>{job.customer_name}</h1>
               <div className="order-meta">
@@ -153,6 +156,7 @@ export default function JobDetailPage() {
               <Field label="Mobile (10 digits) *"><Text value={job.mobile} onChange={(v) => set("mobile", v.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" /></Field>
               <Field label="Product category (select one or more)" full><MultiSelect value={job.product_category} onChange={(v) => set("product_category", v)} options={PRODUCT_TYPES} placeholder="Tap to select products" /></Field>
               <Field label="Quantity"><Text value={job.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" /></Field>
+              <Field label="Size"><Text value={job.size_material} onChange={(v) => set("size_material", v)} placeholder="10x6 ft flex" /></Field>
               <Field label="Design required"><Select value={job.design_required || "No"} onChange={(v) => set("design_required", v)} options={YES_NO} /></Field>
               <Field label={["owner", "manager"].includes(role) ? "Delivery date" : "Delivery date (admin/manager only)"}><input className="text-input" type="date" value={job.delivery_date || ""} onChange={(e) => set("delivery_date", e.target.value)} disabled={!["owner", "manager"].includes(role)} /></Field>
               <Field label="Priority"><Select value={job.priority} onChange={(v) => set("priority", v)} options={PRIORITY} /></Field>
@@ -165,6 +169,12 @@ export default function JobDetailPage() {
             <div className="form-grid">
               <Field label="Designer (system)"><Select value={job.designer_name} onChange={(v) => set("designer_name", v)} options={DESIGNERS} /></Field>
               <Field label="Design status"><Select value={job.design_status} onChange={(v) => set("design_status", v)} options={DESIGN_STATUS} /></Field>
+              <Field label="Working file location (link)" full>
+                <Text value={job.work_file_link} onChange={(v) => set("work_file_link", v.slice(0, 200))} placeholder="https://drive.google.com/…" maxLength={200} />
+                {job.work_file_link && /^https?:\/\//i.test(job.work_file_link.trim()) && (
+                  <a href={job.work_file_link.trim()} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 6, fontSize: 13 }}>Open working file location ↗</a>
+                )}
+              </Field>
             </div>
           </section>
 

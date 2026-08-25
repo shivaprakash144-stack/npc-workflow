@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
-import { sql, ensureSchema, nextEnquiryId } from "@/lib/db";
+import { sql, ensureSchema, nextEnquiryId, autoCancelStaleEnquiries } from "@/lib/db";
 import { isValidMobile } from "@/lib/derive";
 import { entry, parseHistory } from "@/lib/history";
 import { syncEnquiriesToSheet } from "@/lib/gsheet";
@@ -21,9 +21,10 @@ export async function GET() {
   try {
     await ensureSchema();
     const q = sql();
+    await autoCancelStaleEnquiries(q);
     // ref_image (base64) is EXCLUDED from the list to save network transfer;
     // has_ref_image tells the UI an image exists. Image loads only if needed.
-    const enquiries = await q`SELECT enquiry_id, customer_id, customer_name, mobile, product_type, size_material, quantity, design_required, est_price, status, designer_name, priority, enquiry_mode, history, created_at, updated_at,
+    const enquiries = await q`SELECT enquiry_id, customer_id, customer_name, mobile, product_type, size_material, quantity, design_required, est_price, status, designer_name, priority, enquiry_mode, cancel_reason, history, created_at, updated_at,
       (COALESCE(ref_image, '') <> '') AS has_ref_image
       FROM enquiries ORDER BY created_at DESC`;
     return NextResponse.json({ enquiries });

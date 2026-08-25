@@ -32,6 +32,7 @@ export async function PATCH(req, { params }) {
     const b = await req.json();
     if (!String(b.customer_name || "").trim()) return NextResponse.json({ error: "Customer name is required" }, { status: 400 });
     if (!isValidMobile(b.mobile)) return NextResponse.json({ error: "Mobile number must be exactly 10 digits" }, { status: 400 });
+    if (String(b.work_file_link || "").length > 200) return NextResponse.json({ error: "Working file location link must be under 200 characters" }, { status: 400 });
 
     const q = sql();
     const rows = await q`SELECT * FROM jobs WHERE job_id=${params.jobId}`;
@@ -93,7 +94,7 @@ export async function PATCH(req, { params }) {
 
     await q`UPDATE jobs SET
       customer_name=${b.customer_name.trim()}, mobile=${String(b.mobile).trim()},
-      product_category=${String(b.product_category || "").trim()}, quantity=${b.quantity || ""},
+      product_category=${String(b.product_category || "").trim()}, size_material=${b.size_material || ""}, quantity=${b.quantity || ""},
       payment_status=${payment},
       delivery_date=${newDate || null}, priority=${b.priority || "Normal"},
       order_status=${orderStatus},
@@ -102,6 +103,7 @@ export async function PATCH(req, { params }) {
       machine_type=${b.machine_type || ""}, work_type=${b.work_type || ""}, production_status=${b.production_status || ""},
       production_unit=${b.production_unit || ""},
       cancel_reason=${cancelReason},
+      work_file_link=${String(b.work_file_link || "").trim().slice(0, 200)},
       delivery_status=${b.delivery_status || ""},
       production_complete=${prodComplete},
       review_done=${reviewDone},
