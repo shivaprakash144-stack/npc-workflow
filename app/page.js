@@ -14,6 +14,7 @@ const st = (v) => (v || "").toLowerCase();
 
 const DRILLS = {
   today: { label: "Today's orders", accent: "var(--ink)", fn: (j) => (j.order_date || "").slice(0, 10) === today() },
+  todayEnq: { label: "Today's enquiries", accent: "var(--magenta)", isEnquiry: true, efn: (e) => String(e.created_at || "").slice(0, 10) === today() },
   todayDelivery: { label: "Today's deliveries", accent: "var(--yellow)", fn: (j) => j.delivery_date && String(j.delivery_date).slice(0, 10) === today() && !["delivered", "cancelled"].includes(st(j.order_status)) },
   designPending: { label: "Design pending", accent: "var(--magenta)", fn: (j) => ["design pending", "design approval"].includes(st(j.order_status)) },
   production: { label: "Production pending", accent: "var(--cyan)", fn: (j) => st(j.order_status) === "production" },
@@ -22,7 +23,7 @@ const DRILLS = {
   overdue: { label: "Overdue deliveries", accent: "var(--red)", fn: (j) => j.delivery_date && String(j.delivery_date).slice(0, 10) < today() && !["delivered", "cancelled"].includes(st(j.order_status)) },
   reviewPending: { label: "Review pending", accent: "var(--yellow)", fn: (j) => st(j.order_status) === "delivered" && !j.review_done },
   delivered: { label: "Completed orders", accent: "var(--key)", fn: (j) => st(j.order_status) === "delivered" },
-  newEnq: { label: "New enquiries", accent: "var(--magenta)", fn: null }, // enquiries drill
+  newEnq: { label: "New enquiries", accent: "var(--magenta)", isEnquiry: true, efn: (e) => (e.status || "") === "New Enquiry" },
 };
 
 function Dashboard() {
@@ -31,7 +32,7 @@ function Dashboard() {
   const [enquiries, setEnquiries] = useState([]);
   const [error, setError] = useState("");
   const [drill, setDrill] = useState(null);
-  const [rf, setRf] = useState({ from: "", to: "", machine: "", work: "", status: "All" });
+  const [rf, setRf] = useState({ from: "", to: "", machine: "", work: "", status: "All", source: "All" });
   const [rPage, setRPage] = useState(1);
   const searchParams = useSearchParams();
   // Reports open only via the ☰ menu (link to /?reports=1)
@@ -94,21 +95,21 @@ function Dashboard() {
     const list = jobs || [];
     const c = {};
     for (const key of Object.keys(DRILLS)) {
-      c[key] = key === "newEnq"
-        ? enquiries.filter((e) => (e.status || "") === "New Enquiry").length
+      c[key] = DRILLS[key].isEnquiry
+        ? enquiries.filter(DRILLS[key].efn).length
         : list.filter(DRILLS[key].fn).length;
     }
     return c;
   }, [jobs, enquiries]);
 
   const drillJobs = useMemo(() => {
-    if (!drill || drill === "newEnq" || !jobs) return [];
+    if (!drill || DRILLS[drill].isEnquiry || !jobs) return [];
     return jobs.filter(DRILLS[drill].fn);
   }, [drill, jobs]);
 
   const drillEnqs = useMemo(() => {
-    if (drill !== "newEnq") return [];
-    return enquiries.filter((e) => (e.status || "") === "New Enquiry");
+    if (!drill || !DRILLS[drill].isEnquiry) return [];
+    return enquiries.filter(DRILLS[drill].efn);
   }, [drill, enquiries]);
 
   const summary = useMemo(() => {
@@ -133,6 +134,8 @@ function Dashboard() {
     if (rf.machine) list = list.filter((j) => (j.machine_type || "").includes(rf.machine));
     if (rf.work) list = list.filter((j) => (j.work_type || "").includes(rf.work));
     if (rf.status !== "All") list = list.filter((j) => (j.order_status || "") === rf.status);
+    if (rf.source === "From Enquiry") list = list.filter((j) => !!(j.enquiry_id || "").trim());
+    if (rf.source === "Direct Entry") list = list.filter((j) => !(j.enquiry_id || "").trim());
     return list;
   }, [jobs, rf]);
 
@@ -148,6 +151,7 @@ function Dashboard() {
       "Customer": j.customer_name,
       "Mobile": j.mobile,
       "Product": j.product_category,
+      "Source Enquiry": j.enquiry_id || "Direct entry",
       "Quantity": j.quantity,
       "Work Type": j.work_type,
       "Machine Type": j.machine_type,
@@ -217,15 +221,15 @@ function Dashboard() {
           {drill && (
             <section className="section">
               <div className="row-top">
-                <div className="eyebrow">{DRILLS[drill].label} ({drill === "newEnq" ? drillEnqs.length : drillJobs.length})</div>
+                <div className="eyebrow">{DRILLS[drill].label} ({DRILLS[drill].isEnquiry ? drillEnqs.length : drillJobs.length})</div>
                 <button className="btn-ghost" onClick={() => setDrill(null)}>✕ Close</button>
               </div>
 
-              {drill === "newEnq" ? (
+              {DRILLS[drill].isEnquiry ? (
                 <>
-                  {drillEnqs.length === 0 && <div className="empty">No new enquiries right now.</div>}
+                  {drillEnqs.length === 0 && <div className="empty">No enquiries here.</div>}
                   {drillEnqs.map((e) => (
-                    <Link href="/enquiries" className="list-row" key={e.enquiry_id}>
+                    <Link href={`/enquiries/${e.enquiry_id}`} className="list-row" key={e.enquiry_id}>
                       <div className="row-top">
                         <span className="job-id">{e.enquiry_id}</span>
                         <span className="pill pill-magenta">{e.status}</span>
@@ -291,6 +295,7 @@ function Dashboard() {
                 <Field label="Machine type"><Select value={rf.machine} onChange={(v) => setRf((f) => ({ ...f, machine: v }))} options={MACHINE_TYPES} /></Field>
                 <Field label="Work type"><Select value={rf.work} onChange={(v) => setRf((f) => ({ ...f, work: v }))} options={WORK_TYPES} /></Field>
                 <Field label="Order status" full><Select value={rf.status} onChange={(v) => setRf((f) => ({ ...f, status: v }))} options={["All", ...ORDER_STATUS]} /></Field>
+                <Field label="Source" full><Select value={rf.source} onChange={(v) => setRf((f) => ({ ...f, source: v }))} options={["All", "From Enquiry", "Direct Entry"]} /></Field>
               </div>
               {!rf.from ? (
                 <div className="empty" style={{ marginTop: 12 }}>Select a From date (and To date) above to view the job report.</div>
@@ -307,7 +312,7 @@ function Dashboard() {
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
                     <thead>
                       <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)" }}>
-                        {["Job ID", "Date", "Customer", "Product", "System", "Status", "Due", "Payment"].map((h) => (
+                        {["Job ID", "Date", "Customer", "Product", "System", "Status", "Source", "Due", "Payment"].map((h) => (
                           <th key={h} style={{ padding: "8px 8px", whiteSpace: "nowrap" }}>{h}</th>
                         ))}
                       </tr>
@@ -321,6 +326,7 @@ function Dashboard() {
                           <td style={{ padding: "7px 8px" }}>{j.product_category}</td>
                           <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>{j.designer_name || "—"}</td>
                           <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>{j.order_status}</td>
+                          <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>{j.enquiry_id ? <span className="pill pill-cyan" style={{ fontSize: 11 }}>{j.enquiry_id}</span> : "Direct"}</td>
                           <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>{j.delivery_date ? String(j.delivery_date).slice(0, 10) : "—"}</td>
                           <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>{(j.payment_status || "").toLowerCase() === "yes" ? "Paid" : "Pending"}</td>
                         </tr>

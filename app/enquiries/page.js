@@ -43,6 +43,8 @@ export default function EnquiriesPage() {
   const [toast, setToast] = useState("");
   const [filter, setFilter] = useState(saved?.filter ?? "All");
   const [query, setQuery] = useState(saved?.query ?? "");
+  const [from, setFrom] = useState(saved?.from ?? "");
+  const [to, setTo] = useState(saved?.to ?? "");
   const [system, setSystem] = useState(saved?.system ?? "");
   const [prio, setPrio] = useState(saved?.prio ?? "All");
   const [page, setPage] = useState(saved?.page ?? 1);
@@ -55,8 +57,8 @@ export default function EnquiriesPage() {
   // Persist filters whenever they change (skip the very first render).
   useEffect(() => {
     if (!hydrated) return;
-    sessionStorage.setItem(FILTER_KEY, JSON.stringify({ filter, query, system, prio, page }));
-  }, [hydrated, filter, query, system, prio, page]);
+    sessionStorage.setItem(FILTER_KEY, JSON.stringify({ filter, query, from, to, system, prio, page }));
+  }, [hydrated, filter, query, from, to, system, prio, page]);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/enquiries", { cache: "no-store" });
@@ -112,8 +114,10 @@ export default function EnquiriesPage() {
   // Base list: search + system filter applied (chip counts computed on this)
   const baseList = useMemo(() => {
     let l = list || [];
-    // Default view: last 30 days of enquiries
-    l = l.filter((e) => String(e.created_at || "").slice(0, 10) >= daysAgo(30));
+    // Default view: last 30 days (set the From date to see older enquiries)
+    if (from) l = l.filter((e) => String(e.created_at || "").slice(0, 10) >= from);
+    else l = l.filter((e) => String(e.created_at || "").slice(0, 10) >= daysAgo(30));
+    if (to) l = l.filter((e) => String(e.created_at || "").slice(0, 10) <= to);
     if (system) l = l.filter((e) => (e.designer_name || "") === system);
     if (prio !== "All") l = l.filter((e) => (e.priority || "Normal") === prio);
     if (q) {
@@ -126,7 +130,7 @@ export default function EnquiriesPage() {
       );
     }
     return l;
-  }, [list, q, system, prio]);
+  }, [list, q, from, to, system, prio]);
 
   const counts = useMemo(() => {
     const c = { All: baseList.length };
@@ -179,6 +183,14 @@ export default function EnquiriesPage() {
           <input className="search-input" placeholder="Search name or mobile to check duplicates" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
         </div>
         <div className="form-grid" style={{ marginTop: 10 }}>
+          <div>
+            <label className="f-label">From date (default: last 30 days)</label>
+            <input className="text-input" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+          </div>
+          <div>
+            <label className="f-label">To date</label>
+            <input className="text-input" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+          </div>
           <div className="full">
             <label className="f-label">System (designer)</label>
             <select value={system} onChange={(e) => { setSystem(e.target.value); setPage(1); }}>
