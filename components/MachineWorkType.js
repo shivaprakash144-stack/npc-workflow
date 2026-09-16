@@ -99,7 +99,7 @@ export default function MachineWorkType({ machineValue, workTypeValue, onChange 
                     value={row.workTypes.join(", ")}
                     onChange={(v) => setWorkTypes(i, v)}
                     options={isMapped ? mappedOptions : WORK_TYPES}
-                    allowOther={!isMapped}
+                    allowOther
                     placeholder="Tap to select work types"
                   />
                 ) : (
