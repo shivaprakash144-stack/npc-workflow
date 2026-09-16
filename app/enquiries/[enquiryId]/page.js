@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Shell from "@/components/Shell";
-import { Field, Select, Text, FileUpload, MultiSelect, SelectWithOther } from "@/components/Field";
-import { ENQUIRY_STATUS, PRODUCT_TYPES, YES_NO, DESIGNERS, PRIORITY, ENQUIRY_MODE, ENQUIRY_CANCEL_REASONS } from "@/lib/options";
+import { Field, Select, Text, FileUpload, SelectWithOther } from "@/components/Field";
+import ProductCategoryType from "@/components/ProductCategoryType";
+import { ENQUIRY_STATUS, YES_NO, DESIGNERS, PRIORITY, ENQUIRY_MODE, ENQUIRY_CANCEL_REASONS } from "@/lib/options";
 import { formatStamp } from "@/lib/status";
 
 // Status dropdown on the detail page excludes "Cancelled" — cancelling
@@ -100,7 +101,13 @@ export default function EnquiryDetailPage() {
               <Field label="Customer name *" full><Text value={enquiry.customer_name} onChange={(v) => set("customer_name", v)} /></Field>
               <Field label="Mobile (10 digits) *"><Text value={enquiry.mobile} onChange={(v) => set("mobile", v.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" /></Field>
               <Field label="Enquiry mode"><SelectWithOther value={enquiry.enquiry_mode} onChange={(v) => set("enquiry_mode", v)} options={ENQUIRY_MODE} placeholder="Type the enquiry mode" /></Field>
-              <Field label="Product category (select one or more)" full><MultiSelect value={enquiry.product_type} onChange={(v) => set("product_type", v)} options={PRODUCT_TYPES} placeholder="Tap to select products" /></Field>
+              <div className="full">
+                <ProductCategoryType
+                  categoryValue={enquiry.product_category}
+                  typeValue={enquiry.product_type}
+                  onChange={(c, t) => setEnquiry((e) => ({ ...e, product_category: c, product_type: t }))}
+                />
+              </div>
               <Field label="Size / material"><Text value={enquiry.size_material} onChange={(v) => set("size_material", v)} placeholder="10x6 ft flex" /></Field>
               <Field label="Quantity"><Text value={enquiry.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" /></Field>
               <Field label="Design required"><Select value={enquiry.design_required || "No"} onChange={(v) => set("design_required", v)} options={YES_NO} /></Field>

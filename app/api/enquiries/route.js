@@ -24,7 +24,7 @@ export async function GET() {
     await autoCancelStaleEnquiries(q);
     // ref_image (base64) is EXCLUDED from the list to save network transfer;
     // has_ref_image tells the UI an image exists. Image loads only if needed.
-    const enquiries = await q`SELECT enquiry_id, customer_id, customer_name, mobile, product_type, size_material, quantity, design_required, est_price, status, designer_name, priority, enquiry_mode, cancel_reason, history, created_at, updated_at,
+    const enquiries = await q`SELECT enquiry_id, customer_id, customer_name, mobile, product_category, product_type, size_material, quantity, design_required, est_price, status, designer_name, priority, enquiry_mode, cancel_reason, history, created_at, updated_at,
       (COALESCE(ref_image, '') <> '') AS has_ref_image
       FROM enquiries ORDER BY created_at DESC`;
     return NextResponse.json({ enquiries });
@@ -52,8 +52,8 @@ export async function POST(req) {
     const q = sql();
     const id = await nextEnquiryId(q);
     const history = JSON.stringify([entry(g.s.user, "Enquiry created")]);
-    await q`INSERT INTO enquiries (enquiry_id, customer_id, customer_name, mobile, product_type, size_material, quantity, design_required, ref_image, est_price, status, designer_name, priority, enquiry_mode, history)
-      VALUES (${id}, ${b.customer_id || ""}, ${b.customer_name.trim()}, ${String(b.mobile).trim()}, ${b.product_type || ""}, ${b.size_material || ""}, ${b.quantity || ""}, ${b.design_required || "No"}, ${b.ref_image || ""}, ${b.est_price || ""}, ${b.status || "New Enquiry"}, ${b.designer_name || ""}, ${b.priority || "Normal"}, ${b.enquiry_mode || ""}, ${history})`;
+    await q`INSERT INTO enquiries (enquiry_id, customer_id, customer_name, mobile, product_category, product_type, size_material, quantity, design_required, ref_image, est_price, status, designer_name, priority, enquiry_mode, history)
+      VALUES (${id}, ${b.customer_id || ""}, ${b.customer_name.trim()}, ${String(b.mobile).trim()}, ${b.product_category || ""}, ${b.product_type || ""}, ${b.size_material || ""}, ${b.quantity || ""}, ${b.design_required || "No"}, ${b.ref_image || ""}, ${b.est_price || ""}, ${b.status || "New Enquiry"}, ${b.designer_name || ""}, ${b.priority || "Normal"}, ${b.enquiry_mode || ""}, ${history})`;
     await syncEnquiriesToSheet(q);
     return NextResponse.json({ ok: true, enquiry_id: id });
   } catch (e) {
@@ -78,7 +78,7 @@ export async function PUT(req) {
     } else {
       history.push(entry(g.s.user, "Enquiry updated"));
     }
-    await q`UPDATE enquiries SET customer_name=${b.customer_name.trim()}, mobile=${String(b.mobile).trim()}, product_type=${b.product_type || ""}, size_material=${b.size_material || ""}, quantity=${b.quantity || ""}, design_required=${b.design_required || "No"}, ref_image=${b.ref_image === "__KEEP__" ? (old.ref_image || "") : (b.ref_image || "")}, est_price=${b.est_price || ""}, status=${b.status || "New Enquiry"}, designer_name=${b.designer_name || ""}, priority=${b.priority || "Normal"}, enquiry_mode=${b.enquiry_mode || ""}, history=${JSON.stringify(history)}, updated_at=now() WHERE enquiry_id=${b.enquiry_id}`;
+    await q`UPDATE enquiries SET customer_name=${b.customer_name.trim()}, mobile=${String(b.mobile).trim()}, product_category=${b.product_category || ""}, product_type=${b.product_type || ""}, size_material=${b.size_material || ""}, quantity=${b.quantity || ""}, design_required=${b.design_required || "No"}, ref_image=${b.ref_image === "__KEEP__" ? (old.ref_image || "") : (b.ref_image || "")}, est_price=${b.est_price || ""}, status=${b.status || "New Enquiry"}, designer_name=${b.designer_name || ""}, priority=${b.priority || "Normal"}, enquiry_mode=${b.enquiry_mode || ""}, history=${JSON.stringify(history)}, updated_at=now() WHERE enquiry_id=${b.enquiry_id}`;
     await syncEnquiriesToSheet(q);
     return NextResponse.json({ ok: true });
   } catch (e) {

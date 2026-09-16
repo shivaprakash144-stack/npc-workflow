@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
-import { Field, Select, Text, SelectWithOther, MultiSelect } from "@/components/Field";
+import { Field, Select, Text, SelectWithOther } from "@/components/Field";
 import MachineWorkType from "@/components/MachineWorkType";
+import ProductCategoryType from "@/components/ProductCategoryType";
 import {
-  DESIGN_STATUS, DESIGNERS, PRODUCT_TYPES, PRIORITY, PAYMENT, YES_NO,
+  DESIGN_STATUS, DESIGNERS, PRIORITY, PAYMENT, YES_NO,
   PRODUCTION_STATUS, DELIVERY_STATUS, PRODUCTION_UNITS, CANCEL_REASONS,
 } from "@/lib/options";
 import { STAGES, stagePill, stageIndex, formatStamp } from "@/lib/status";
@@ -155,7 +156,13 @@ export default function JobDetailPage() {
             <div className="form-grid">
               <Field label="Customer name *"><Text value={job.customer_name} onChange={(v) => set("customer_name", v)} /></Field>
               <Field label="Mobile (10 digits) *"><Text value={job.mobile} onChange={(v) => set("mobile", v.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" /></Field>
-              <Field label="Product category (select one or more)" full><MultiSelect value={job.product_category} onChange={(v) => set("product_category", v)} options={PRODUCT_TYPES} placeholder="Tap to select products" /></Field>
+              <div className="full">
+                <ProductCategoryType
+                  categoryValue={job.product_category}
+                  typeValue={job.product_type}
+                  onChange={(c, t) => setJob((j) => ({ ...j, product_category: c, product_type: t }))}
+                />
+              </div>
               <Field label="Quantity"><Text value={job.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" /></Field>
               <Field label="Size"><Text value={job.size_material} onChange={(v) => set("size_material", v)} placeholder="10x6 ft flex" /></Field>
               <Field label="Design required"><Select value={job.design_required || "No"} onChange={(v) => set("design_required", v)} options={YES_NO} /></Field>

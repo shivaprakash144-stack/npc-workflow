@@ -34,6 +34,11 @@ const CHIPS = [
   { key: "Hold", fn: (j) => j.design_status === "Hold" },
 ];
 
+// These four chips always stay capped to the last 30 days (by order date),
+// regardless of whatever From/To range is set for the rest of the list —
+// their all-time totals aren't useful to browse here.
+const RECENT_ONLY_CHIPS = new Set(["Delivered", "Cancelled", "Review Pending", "Completed"]);
+
 export default function JobsPage() {
   const router = useRouter();
   const saved = loadSavedFilters();
@@ -107,16 +112,40 @@ export default function JobsPage() {
     return list;
   }, [jobs, query, from, to, system]);
 
+  // Same as baseList, but always capped to the last 30 days regardless of
+  // the From/To fields — used only for the always-recent chips above.
+  const recentList = useMemo(() => {
+    let list = jobs || [];
+    list = list.filter((j) => (j.order_date || "").slice(0, 10) >= daysAgo(30));
+    if (system) list = list.filter((j) => (j.designer_name || "") === system);
+    const q = query.trim().toLowerCase();
+    const qd = qDigitsOf(query);
+    if (q) {
+      list = list.filter(
+        (j) =>
+          (j.job_id || "").toLowerCase().includes(q) ||
+          (j.customer_name || "").toLowerCase().includes(q) ||
+          (j.mobile || "").includes(q) ||
+          (qd.length >= 4 && (j.mobile || "").includes(qd))
+      );
+    }
+    return list;
+  }, [jobs, query, system]);
+
   const counts = useMemo(() => {
     const c = {};
-    for (const ch of CHIPS) c[ch.key] = baseList.filter(ch.fn).length;
+    for (const ch of CHIPS) {
+      const src = RECENT_ONLY_CHIPS.has(ch.key) ? recentList : baseList;
+      c[ch.key] = src.filter(ch.fn).length;
+    }
     return c;
-  }, [baseList]);
+  }, [baseList, recentList]);
 
   const filtered = useMemo(() => {
     const ch = CHIPS.find((c) => c.key === filter) || CHIPS[0];
-    return baseList.filter(ch.fn);
-  }, [baseList, filter]);
+    const src = RECENT_ONLY_CHIPS.has(filter) ? recentList : baseList;
+    return src.filter(ch.fn);
+  }, [baseList, recentList, filter]);
 
   // Pagination: 30 per page (skip on the very first render so a restored
   // page number from sessionStorage isn't immediately reset to 1)

@@ -113,13 +113,14 @@ export default function ProductionPage() {
     return list;
   }, [jobs, q, from, to, unit]);
 
+  // "Ready" and "Completed" chips are intentionally not shown here anymore —
+  // those jobs can still be found (and their production details viewed) by
+  // searching their Job ID, mobile, or customer name above.
   const CHIPS = useMemo(() => ([
     { key: "All", fn: (j) => !j.production_complete },
     { key: "Pending", fn: (j) => !j.production_complete && j.production_status !== "Ready" },
-    { key: "Ready", fn: (j) => !j.production_complete && j.production_status === "Ready" },
     { key: "Today delivery", fn: (j) => !j.production_complete && j.delivery_date && String(j.delivery_date).slice(0, 10) === today },
     { key: "Overdue", fn: (j) => !j.production_complete && j.delivery_date && String(j.delivery_date).slice(0, 10) < today && j.order_status !== "Delivered" },
-    { key: "Completed", fn: (j) => !!j.production_complete },
   ]), [today]);
 
   const counts = useMemo(() => {
@@ -128,10 +129,14 @@ export default function ProductionPage() {
     return c;
   }, [baseList, CHIPS]);
 
+  // While actively searching, show every match regardless of the selected
+  // chip — a Job ID search should always be able to find a Ready or
+  // Completed job even though those chips aren't shown anymore.
   const filtered = useMemo(() => {
+    if (q) return baseList;
     const ch = CHIPS.find((c) => c.key === filter) || CHIPS[0];
     return baseList.filter(ch.fn);
-  }, [baseList, filter, CHIPS]);
+  }, [baseList, filter, CHIPS, q]);
 
   useEffect(() => { setPage(1); }, [query, filter, from, to, unit]);
   const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));

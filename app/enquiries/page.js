@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
-import { Field, Select, Text, FileUpload, MultiSelect, SelectWithOther } from "@/components/Field";
-import { ENQUIRY_STATUS, PRODUCT_TYPES, YES_NO, DESIGNERS, PRIORITY, ENQUIRY_MODE } from "@/lib/options";
+import { Field, Select, Text, FileUpload, SelectWithOther } from "@/components/Field";
+import ProductCategoryType from "@/components/ProductCategoryType";
+import { ENQUIRY_STATUS, YES_NO, DESIGNERS, PRIORITY, ENQUIRY_MODE } from "@/lib/options";
 import { formatStamp } from "@/lib/status";
 
 const PER_PAGE = 50;
@@ -20,7 +21,7 @@ const qDigitsOf = (raw) => {
 const daysAgo = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 
 const empty = {
-  customer_name: "", mobile: "", product_type: "", size_material: "", quantity: "",
+  customer_name: "", mobile: "", product_category: "", product_type: "", size_material: "", quantity: "",
   design_required: "No", ref_image: "", status: "New Enquiry",
   designer_name: "", priority: "Normal", enquiry_mode: "",
 };
@@ -159,7 +160,13 @@ export default function EnquiriesPage() {
             <Field label="Customer name *" full><Text value={form.customer_name} onChange={(v) => set("customer_name", v)} placeholder="Ramesh Kumar" /></Field>
             <Field label="Mobile (10 digits) *"><Text value={form.mobile} onChange={(v) => set("mobile", v.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="9840012345" /></Field>
             <Field label="Enquiry mode"><SelectWithOther value={form.enquiry_mode} onChange={(v) => set("enquiry_mode", v)} options={ENQUIRY_MODE} placeholder="Type the enquiry mode" /></Field>
-            <Field label="Product category (select one or more)" full><MultiSelect value={form.product_type} onChange={(v) => set("product_type", v)} options={PRODUCT_TYPES} placeholder="Tap to select products" /></Field>
+            <div className="full">
+              <ProductCategoryType
+                categoryValue={form.product_category}
+                typeValue={form.product_type}
+                onChange={(c, t) => setForm((f) => ({ ...f, product_category: c, product_type: t }))}
+              />
+            </div>
             <Field label="Size / material"><Text value={form.size_material} onChange={(v) => set("size_material", v)} placeholder="10x6 ft flex" /></Field>
             <Field label="Quantity"><Text value={form.quantity} onChange={(v) => set("quantity", v)} inputMode="numeric" placeholder="100" /></Field>
             <Field label="Design required"><Select value={form.design_required} onChange={(v) => set("design_required", v)} options={YES_NO} /></Field>

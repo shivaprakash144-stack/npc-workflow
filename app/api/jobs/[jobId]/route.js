@@ -94,7 +94,7 @@ export async function PATCH(req, { params }) {
 
     await q`UPDATE jobs SET
       customer_name=${b.customer_name.trim()}, mobile=${String(b.mobile).trim()},
-      product_category=${String(b.product_category || "").trim()}, size_material=${b.size_material || ""}, quantity=${b.quantity || ""},
+      product_category=${String(b.product_category || "").trim()}, product_type=${b.product_type || ""}, size_material=${b.size_material || ""}, quantity=${b.quantity || ""},
       payment_status=${payment},
       delivery_date=${newDate || null}, priority=${b.priority || "Normal"},
       order_status=${orderStatus},

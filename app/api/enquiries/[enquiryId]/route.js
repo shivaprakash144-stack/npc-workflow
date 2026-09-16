@@ -60,7 +60,7 @@ export async function PATCH(req, { params }) {
 
     await q`UPDATE enquiries SET
       customer_name=${b.customer_name.trim()}, mobile=${String(b.mobile).trim()},
-      product_type=${b.product_type || ""}, size_material=${b.size_material || ""}, quantity=${b.quantity || ""},
+      product_category=${b.product_category || ""}, product_type=${b.product_type || ""}, size_material=${b.size_material || ""}, quantity=${b.quantity || ""},
       design_required=${b.design_required || "No"},
       ref_image=${b.ref_image === "__KEEP__" ? (oldE.ref_image || "") : (b.ref_image || "")},
       est_price=${b.est_price || ""}, status=${status},
