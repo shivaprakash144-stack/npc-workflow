@@ -3,7 +3,8 @@ import { requireSession } from "@/lib/auth";
 import { sql, ensureSchema } from "@/lib/db";
 import { isValidMobile } from "@/lib/derive";
 import { entry, parseHistory, enquiryChanges } from "@/lib/history";
-import { syncEnquiriesToSheet } from "@/lib/gsheet";
+// Google Sheet sync now runs once a day via /api/cron/sheet-sync (see vercel.json)
+// instead of on every save, to keep Neon network-transfer usage low.
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +69,6 @@ export async function PATCH(req, { params }) {
       cancel_reason=${cancelReason},
       history=${JSON.stringify(history)}, updated_at=now()
       WHERE enquiry_id=${params.enquiryId}`;
-    await syncEnquiriesToSheet(q);
     return NextResponse.json({ ok: true, status, history });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 502 });

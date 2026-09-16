@@ -3,7 +3,8 @@ import { requireSession } from "@/lib/auth";
 import { sql, ensureSchema, nextJobId } from "@/lib/db";
 import { isValidMobile } from "@/lib/derive";
 import { entry } from "@/lib/history";
-import { syncJobsToSheet, syncEnquiriesToSheet } from "@/lib/gsheet";
+// Google Sheet sync now runs once a day via /api/cron/sheet-sync (see vercel.json)
+// instead of on every save, to keep Neon network-transfer usage low.
 
 export const dynamic = "force-dynamic";
 
@@ -44,9 +45,7 @@ export async function POST(req) {
           VALUES (${id}, ${b.enquiry_id || ""}, ${b.customer_name.trim()}, ${String(b.mobile).trim()}, ${String(b.product_category || "").trim()}, ${b.product_type || ""}, ${b.size_material || ""}, ${b.quantity}, ${payment}, ${b.delivery_date}, ${b.priority || "Normal"}, 'Design Pending', ${b.work_type || ""}, ${b.designer_name || ""}, ${b.design_required || "No"}, ${b.production_unit || ""}, ${b.notes || ""}, ${history}, false)`;
         if (b.enquiry_id) {
           await q`UPDATE enquiries SET status='Confirmed' WHERE enquiry_id=${b.enquiry_id}`;
-          await syncEnquiriesToSheet(q);
         }
-        await syncJobsToSheet(q);
         return NextResponse.json({ ok: true, job_id: id });
       } catch (err) {
         if (!String(err.message).includes("duplicate")) throw err;
