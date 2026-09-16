@@ -4,9 +4,10 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
 import { Field, Select, Text, SelectWithOther, MultiSelect } from "@/components/Field";
+import MachineWorkType from "@/components/MachineWorkType";
 import {
-  DESIGN_STATUS, DESIGNERS, PRODUCTION_STATUS, DELIVERY_STATUS,
-  WORK_TYPES, MACHINE_TYPES, PRODUCT_TYPES, PRIORITY, PAYMENT, YES_NO, PRODUCTION_UNITS, CANCEL_REASONS,
+  DESIGN_STATUS, DESIGNERS, PRODUCT_TYPES, PRIORITY, PAYMENT, YES_NO,
+  PRODUCTION_STATUS, DELIVERY_STATUS, PRODUCTION_UNITS, CANCEL_REASONS,
 } from "@/lib/options";
 import { STAGES, stagePill, stageIndex, formatStamp } from "@/lib/status";
 
@@ -180,9 +181,12 @@ export default function JobDetailPage() {
 
           <section className="section-card">
             <div className="section-title"><span className="sec-dot" style={{ background: "var(--cyan)" }} />Production department</div>
+            <MachineWorkType
+              machineValue={job.machine_type}
+              workTypeValue={job.work_type}
+              onChange={(m, w) => setJob((j) => ({ ...j, machine_type: m, work_type: w }))}
+            />
             <div className="form-grid">
-              <Field label="Machine type (select one or more)"><MultiSelect value={job.machine_type} onChange={(v) => set("machine_type", v)} options={MACHINE_TYPES} placeholder="Tap to select machines" /></Field>
-              <Field label="Work type (select one or more)"><MultiSelect value={job.work_type} onChange={(v) => set("work_type", v)} options={WORK_TYPES} placeholder="Tap to select work types" /></Field>
               <Field label="Production unit"><Select value={job.production_unit || ""} onChange={(v) => set("production_unit", v)} options={PRODUCTION_UNITS} /></Field>
               <Field label="Production status" full><Select value={job.production_status} onChange={(v) => set("production_status", v)} options={PRODUCTION_STATUS} /></Field>
             </div>

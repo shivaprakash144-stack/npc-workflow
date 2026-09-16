@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
-import { Field, Select, MultiSelect } from "@/components/Field";
-import { PRODUCTION_STATUS, WORK_TYPES, MACHINE_TYPES, PRODUCTION_UNITS } from "@/lib/options";
+import { Field, Select } from "@/components/Field";
+import MachineWorkType from "@/components/MachineWorkType";
+import { PRODUCTION_STATUS, PRODUCTION_UNITS } from "@/lib/options";
 import { stagePill, formatStamp } from "@/lib/status";
 
 const qDigitsOf = (raw) => {
@@ -199,16 +200,23 @@ export default function ProductionPage() {
               {j.updated_at && <div className="row-sub" style={{ marginTop: 4 }}>Last updated {formatStamp(j.updated_at)}</div>}
 
               {open === j.job_id ? (
-                <div className="form-grid" style={{ marginTop: 12 }}>
-                  <Field label="Machine type (select one or more)"><MultiSelect value={edit.machine_type} onChange={(v) => setEdit((e) => ({ ...e, machine_type: v }))} options={MACHINE_TYPES} placeholder="Tap to select machines" /></Field>
-                  <Field label="Work type (select one or more)"><MultiSelect value={edit.work_type} onChange={(v) => setEdit((e) => ({ ...e, work_type: v }))} options={WORK_TYPES} placeholder="Tap to select work types" /></Field>
-                  <Field label="Production unit"><Select value={edit.production_unit} onChange={(v) => setEdit((e) => ({ ...e, production_unit: v }))} options={PRODUCTION_UNITS} /></Field>
-                  <Field label="Production status" full><Select value={edit.production_status} onChange={(v) => setEdit((e) => ({ ...e, production_status: v }))} options={PRODUCTION_STATUS} /></Field>
-                  <div className="btn-row full">
-                    <button className="btn-secondary" onClick={() => setOpen(null)}>Cancel</button>
-                    <button className="btn-primary" style={{ marginTop: 10 }} onClick={() => save(j.job_id)} disabled={busy}>{busy ? "Saving…" : "Save"}</button>
+                <>
+                  <div style={{ marginTop: 12 }}>
+                    <MachineWorkType
+                      machineValue={edit.machine_type}
+                      workTypeValue={edit.work_type}
+                      onChange={(m, w) => setEdit((e) => ({ ...e, machine_type: m, work_type: w }))}
+                    />
                   </div>
-                </div>
+                  <div className="form-grid" style={{ marginTop: 4 }}>
+                    <Field label="Production unit"><Select value={edit.production_unit} onChange={(v) => setEdit((e) => ({ ...e, production_unit: v }))} options={PRODUCTION_UNITS} /></Field>
+                    <Field label="Production status" full><Select value={edit.production_status} onChange={(v) => setEdit((e) => ({ ...e, production_status: v }))} options={PRODUCTION_STATUS} /></Field>
+                    <div className="btn-row full">
+                      <button className="btn-secondary" onClick={() => setOpen(null)}>Cancel</button>
+                      <button className="btn-primary" style={{ marginTop: 10 }} onClick={() => save(j.job_id)} disabled={busy}>{busy ? "Saving…" : "Save"}</button>
+                    </div>
+                  </div>
+                </>
               ) : !j.production_complete ? (
                 <div className="btn-row" style={{ marginTop: 10 }}>
                   <button className="btn-ghost" onClick={() => openJob(j)}>Update production</button>

@@ -134,7 +134,7 @@ export function SelectWithOther({ value, onChange, options, placeholder = "Type 
 // Checkbox multi-select: lets one customer order multiple products.
 // Stores the selection as a comma-separated string ("Visiting Cards, Mug Printing").
 // Ticking "Other" opens a comment box, same as the single dropdowns.
-export function MultiSelect({ value, onChange, options, placeholder = "Tap to select" }) {
+export function MultiSelect({ value, onChange, options, placeholder = "Tap to select", allowOther = true }) {
   const OTHER = "Other";
   const opts = options.filter((o) => o && o !== OTHER).slice().sort((a, b) => a.localeCompare(b));
   const selected = String(value || "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -229,16 +229,18 @@ export function MultiSelect({ value, onChange, options, placeholder = "Tap to se
               {o}
             </label>
           ))}
-          <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 4px", cursor: "pointer", fontSize: 14 }}>
-            <input
-              type="checkbox"
-              style={{ width: 18, height: 18, accentColor: "var(--ink)" }}
-              checked={otherOn}
-              onChange={toggleOther}
-            />
-            {OTHER}
-          </label>
-          {otherOn && (
+          {allowOther && (
+            <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 4px", cursor: "pointer", fontSize: 14 }}>
+              <input
+                type="checkbox"
+                style={{ width: 18, height: 18, accentColor: "var(--ink)" }}
+                checked={otherOn}
+                onChange={toggleOther}
+              />
+              {OTHER}
+            </label>
+          )}
+          {allowOther && otherOn && (
             <input
               className="text-input"
               style={{ marginTop: 6 }}
